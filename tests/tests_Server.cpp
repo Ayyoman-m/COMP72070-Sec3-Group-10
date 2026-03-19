@@ -1,12 +1,15 @@
 #include <iostream>
+#include<fstream>
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/StateMachine.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/RequestHandler.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/AuthManager.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/DeviceManager.h"
+#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/LogManager.h"
+
 
 // STATE MACHINE TESTS
 
-// This test checks if the server starts in LOCKED mode
+// this test checks if the server starts in LOCKED state
 void testInitialState() {
     StateMachine sm;
 
@@ -18,7 +21,7 @@ void testInitialState() {
     }
 }
 
-// This test checks a valid transition from LOCKED -> HOME
+// this test checks valid transition from LOCKED to HOME
 void testLockedToHome() {
     StateMachine sm;
 
@@ -32,7 +35,7 @@ void testLockedToHome() {
     }
 }
 
-// This test checks that invalid transition is rejected
+// this test checks invalid transition from LOCKED to AWAY
 void testLockedToAwayInvalid() {
     StateMachine sm;
 
@@ -46,7 +49,7 @@ void testLockedToAwayInvalid() {
     }
 }
 
-// This test checks another valid transition HOME -> AWAY
+// this test checks valid transition from HOME to AWAY
 void testHomeToAway() {
     StateMachine sm;
     sm.setState(ServerState::HOME);
@@ -63,15 +66,15 @@ void testHomeToAway() {
 
 // REQUEST HANDLER TESTS
 
-// This test checks if GET_STATUS returns LOCKED initially
+// this test checks GET_STATUS returns LOCKED at start
 void testGetStatusInitiallyLocked() {
     StateMachine sm;
     DeviceManager dm;
+    LogManager lm;
     ClientSession session;
-    RequestHandler handler(sm,dm);
+    RequestHandler handler(sm, dm, lm);
 
     Packet packet{ CommandID::GET_STATUS, "" };
-
     std::string result = handler.handleRequest(packet, session);
 
     if (result == "LOCKED") {
@@ -82,15 +85,15 @@ void testGetStatusInitiallyLocked() {
     }
 }
 
-// This test checks that SET_MODE fails if user is not logged in
+// this test checks SET_MODE fails without login
 void testSetModeWithoutAuthFails() {
     StateMachine sm;
     DeviceManager dm;
+    LogManager lm;
     ClientSession session;
-    RequestHandler handler(sm,dm);
+    RequestHandler handler(sm, dm, lm);
 
     Packet packet{ CommandID::SET_MODE, "HOME" };
-
     std::string result = handler.handleRequest(packet, session);
 
     if (result == "ERROR: NOT AUTHENTICATED") {
@@ -101,18 +104,17 @@ void testSetModeWithoutAuthFails() {
     }
 }
 
-// This test checks SET_MODE works after login
+// this test checks SET_MODE works after login
 void testSetModeWithAuthWorks() {
     StateMachine sm;
     DeviceManager dm;
+    LogManager lm;
     ClientSession session;
-    RequestHandler handler(sm,dm);
+    RequestHandler handler(sm, dm, lm);
 
-    // manually setting authentication (simulating login success)
     session.setAuthenticated(true);
 
     Packet packet{ CommandID::SET_MODE, "HOME" };
-
     std::string result = handler.handleRequest(packet, session);
 
     if (result == "SUCCESS" && sm.getState() == ServerState::HOME) {
@@ -123,14 +125,15 @@ void testSetModeWithAuthWorks() {
     }
 }
 
-// test for valid login
+// AUTH MANAGER TESTS
+
+// this test checks valid login
 void testValidLogin() {
     AuthManager auth;
     ClientSession session;
 
     bool result = auth.login("admin", "1234", session);
 
-    // checking if login worked
     if (result && session.isAuthenticated()) {
         std::cout << "PASS: Valid login works\n";
     }
@@ -139,14 +142,13 @@ void testValidLogin() {
     }
 }
 
-// test for invalid login
+// this test checks invalid login
 void testInvalidLogin() {
     AuthManager auth;
     ClientSession session;
 
-    bool result = auth.login("admin", "wrong",session);
+    bool result = auth.login("admin", "wrong", session);
 
-    // checking if login fails correctly
     if (!result && !session.isAuthenticated()) {
         std::cout << "PASS: Invalid login rejected\n";
     }
@@ -155,7 +157,9 @@ void testInvalidLogin() {
     }
 }
 
-// test turning device ON
+// DEVICE MANAGER TESTS
+
+// this test checks device turns ON
 void testTurnOnDevice() {
     DeviceManager dm;
 
@@ -169,7 +173,7 @@ void testTurnOnDevice() {
     }
 }
 
-// test turning device OFF
+// this test checks device turns OFF
 void testTurnOffDevice() {
     DeviceManager dm;
 
@@ -184,7 +188,7 @@ void testTurnOffDevice() {
     }
 }
 
-// test invalid device
+// this test checks invalid device handling
 void testInvalidDevice() {
     DeviceManager dm;
 
@@ -198,19 +202,23 @@ void testInvalidDevice() {
     }
 }
 
-// test turning on device through request handler
+// DEVICE INTEGRATION TESTS
+
+// this test checks turning on device through request handler
 void testTurnOnDeviceThroughHandler() {
     StateMachine sm;
     DeviceManager dm;
+    LogManager lm;
     ClientSession session;
-    RequestHandler handler(sm, dm);
+    RequestHandler handler(sm, dm, lm);
 
     session.setAuthenticated(true);
+    sm.setState(ServerState::HOME);
 
     Packet packet{ CommandID::TURN_ON_DEVICE, "LIGHT" };
     std::string result = handler.handleRequest(packet, session);
 
-    if (result == "DEVICE TURNED ON" && dm.getStatus("LIGHT") == "ON") {
+    if (result == "SUCCESS" && dm.getStatus("LIGHT") == "ON") {
         std::cout << "PASS: RequestHandler turns LIGHT ON\n";
     }
     else {
@@ -218,14 +226,16 @@ void testTurnOnDeviceThroughHandler() {
     }
 }
 
-// test getting device status through request handler
+// this test checks getting device status through request handler
 void testGetDeviceStatusThroughHandler() {
     StateMachine sm;
     DeviceManager dm;
+    LogManager lm;
     ClientSession session;
-    RequestHandler handler(sm, dm);
+    RequestHandler handler(sm, dm, lm);
 
     session.setAuthenticated(true);
+    sm.setState(ServerState::HOME);
     dm.turnOn("FAN");
 
     Packet packet{ CommandID::GET_DEVICE_STATUS, "FAN" };
@@ -238,6 +248,126 @@ void testGetDeviceStatusThroughHandler() {
         std::cout << "FAIL: RequestHandler should return device status\n";
     }
 }
+
+// this test checks device command is rejected in LOCKED
+void testDeviceCommandRejectedInLocked() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+
+    Packet packet{ CommandID::TURN_ON_DEVICE, "LIGHT" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ERROR: DEVICE COMMAND NOT ALLOWED IN CURRENT STATE") {
+        std::cout << "PASS: Device command rejected in LOCKED\n";
+    }
+    else {
+        std::cout << "FAIL: Device command should be rejected in LOCKED\n";
+    }
+}
+
+// this test checks device command is rejected in MAINTENANCE
+void testDeviceCommandRejectedInMaintenance() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+    sm.setState(ServerState::HOME);
+    sm.setState(ServerState::MAINTENANCE);
+
+    Packet packet{ CommandID::TURN_ON_DEVICE, "LIGHT" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ERROR: DEVICE COMMAND NOT ALLOWED IN CURRENT STATE") {
+        std::cout << "PASS: Device command rejected in MAINTENANCE\n";
+    }
+    else {
+        std::cout << "FAIL: Device command should be rejected in MAINTENANCE\n";
+    }
+}
+
+// this test checks device command works in HOME
+void testDeviceCommandWorksInHome() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+    sm.setState(ServerState::HOME);
+
+    Packet packet{ CommandID::TURN_ON_DEVICE, "LIGHT" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "SUCCESS" && dm.getStatus("LIGHT") == "ON") {
+        std::cout << "PASS: Device command works in HOME\n";
+    }
+    else {
+        std::cout << "FAIL: Device command should work in HOME\n";
+    }
+}
+
+// this test checks full device status list
+void testGetAllDeviceStatus() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+    sm.setState(ServerState::HOME);
+
+    dm.turnOn("LIGHT");
+    dm.turnOff("FAN");
+
+    Packet packet{ CommandID::GET_ALL_DEVICE_STATUS, "" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result.find("LIGHT=ON") != std::string::npos) {
+        std::cout << "PASS: Full device status list returned\n";
+    }
+    else {
+        std::cout << "FAIL: Full device status list should include LIGHT=ON\n";
+    }
+}
+
+// LOG MANAGER TEST
+
+// this test checks log file writing
+void testLogEvent() {
+    LogManager lm;
+
+    lm.logEvent("TEST LOG ENTRY");
+
+    std::ifstream inFile("server_log.txt");
+    std::string line;
+    bool found = false;
+
+    while (std::getline(inFile, line)) {
+        if (line == "TEST LOG ENTRY") {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
+        std::cout << "PASS: Log entry written\n";
+    }
+    else {
+        std::cout << "FAIL: Log entry should be written\n";
+    }
+}
+
+// MAIN
 
 int main() {
     // running all tests one by one
@@ -265,7 +395,13 @@ int main() {
     std::cout << "\n---- Running Device Integration Tests ----\n";
     testTurnOnDeviceThroughHandler();
     testGetDeviceStatusThroughHandler();
+    testDeviceCommandRejectedInLocked();
+    testDeviceCommandRejectedInMaintenance();
+    testDeviceCommandWorksInHome();
+    testGetAllDeviceStatus();
 
+    std::cout << "\n---- Running LogManager Tests ----\n";
+    testLogEvent();
 
     return 0;
 }

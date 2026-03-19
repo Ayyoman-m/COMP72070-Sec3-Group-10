@@ -1,16 +1,15 @@
 #include "Header/DeviceManager.h"
 
-// constructor - initializing some default devices
+// constructor - adding default devices
 DeviceManager::DeviceManager() {
     devices["LIGHT"] = false;
     devices["FAN"] = false;
     devices["AC"] = false;
+    devices["DOOR"] = false;
 }
 
-// turning ON device
+// turning ON a device
 bool DeviceManager::turnOn(const std::string& device) {
-
-    // checking if device exists
     if (devices.find(device) != devices.end()) {
         devices[device] = true;
         return true;
@@ -19,10 +18,8 @@ bool DeviceManager::turnOn(const std::string& device) {
     return false;
 }
 
-// turning OFF device
+// turning OFF a device
 bool DeviceManager::turnOff(const std::string& device) {
-
-    // checking if device exists
     if (devices.find(device) != devices.end()) {
         devices[device] = false;
         return true;
@@ -31,12 +28,22 @@ bool DeviceManager::turnOff(const std::string& device) {
     return false;
 }
 
-// getting device status
+// getting one device status
 std::string DeviceManager::getStatus(const std::string& device) {
-
     if (devices.find(device) != devices.end()) {
         return devices[device] ? "ON" : "OFF";
     }
 
     return "DEVICE NOT FOUND";
+}
+
+// getting all device status together
+std::string DeviceManager::getAllStatus() {
+    std::string result = "";
+
+    for (const auto& item : devices) {
+        result += item.first + "=" + (item.second ? "ON" : "OFF") + "; ";
+    }
+
+    return result;
 }

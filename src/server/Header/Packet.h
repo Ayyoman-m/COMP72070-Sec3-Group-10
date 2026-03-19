@@ -9,6 +9,7 @@ enum class CommandID {
     TURN_ON_DEVICE,
     TURN_OFF_DEVICE,
     GET_DEVICE_STATUS,
+    GET_ALL_DEVICE_STATUS,
     INVALID
 };
 

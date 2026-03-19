@@ -5,7 +5,7 @@
 // this class manages smart home devices
 class DeviceManager {
 private:
-    // storing device name and its state (true = ON, false = OFF)
+    // storing device name and its state
     std::unordered_map<std::string, bool> devices;
 
 public:
@@ -17,6 +17,9 @@ public:
     // turn device OFF
     bool turnOff(const std::string& device);
 
-    // get current status
+    // get one device status
     std::string getStatus(const std::string& device);
+
+    // get all device status in one string
+    std::string getAllStatus();
 };

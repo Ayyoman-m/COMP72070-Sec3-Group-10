@@ -2,11 +2,14 @@
 #include "Header/AuthManager.h"
 
 // constructor
-RequestHandler::RequestHandler(StateMachine& sm, DeviceManager& dm)
-    : stateMachine(sm), deviceManager(dm) {}
+RequestHandler::RequestHandler(StateMachine& sm, DeviceManager& dm, LogManager& lm)
+    : stateMachine(sm), deviceManager(dm), logManager(lm) {}
 
 // handles incoming request
 std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& session) {
+
+    // logging received command
+    logManager.logEvent("RX request received");
 
     // checking login request
     if (packet.command == CommandID::LOGIN) {
@@ -21,13 +24,20 @@ std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& s
 
             bool success = auth.login(username, password, session);
 
-            return success ? "LOGIN SUCCESS" : "LOGIN FAILED";
+            if (success) {
+                logManager.logEvent("LOGIN SUCCESS");
+                return "LOGIN SUCCESS";
+            }
+
+            logManager.logEvent("LOGIN FAILED");
+            return "LOGIN FAILED";
         }
 
+        logManager.logEvent("LOGIN FORMAT ERROR");
         return "ERROR: INVALID LOGIN FORMAT";
     }
 
-    // checking status request
+    // checking current server status
     if (packet.command == CommandID::GET_STATUS) {
         ServerState current = stateMachine.getState();
 
@@ -37,59 +47,84 @@ std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& s
         if (current == ServerState::MAINTENANCE) return "MAINTENANCE";
     }
 
+    // all other commands need login first
+    if (!session.isAuthenticated()) {
+        logManager.logEvent("COMMAND REJECTED - NOT AUTHENTICATED");
+        return "ERROR: NOT AUTHENTICATED";
+    }
+
     // checking mode change request
     if (packet.command == CommandID::SET_MODE) {
-
-        // user must be logged in first
-        if (!session.isAuthenticated()) {
-            return "ERROR: NOT AUTHENTICATED";
-        }
-
         if (packet.data == "HOME") {
-            return stateMachine.setState(ServerState::HOME) ? "SUCCESS" : "ERROR: INVALID TRANSITION";
+            bool result = stateMachine.setState(ServerState::HOME);
+            logManager.logEvent(result ? "SET_MODE HOME SUCCESS" : "SET_MODE HOME FAILED");
+            return result ? "SUCCESS" : "ERROR: INVALID TRANSITION";
         }
 
         if (packet.data == "AWAY") {
-            return stateMachine.setState(ServerState::AWAY) ? "SUCCESS" : "ERROR: INVALID TRANSITION";
+            bool result = stateMachine.setState(ServerState::AWAY);
+            logManager.logEvent(result ? "SET_MODE AWAY SUCCESS" : "SET_MODE AWAY FAILED");
+            return result ? "SUCCESS" : "ERROR: INVALID TRANSITION";
         }
 
         if (packet.data == "MAINTENANCE") {
-            return stateMachine.setState(ServerState::MAINTENANCE) ? "SUCCESS" : "ERROR: INVALID TRANSITION";
+            bool result = stateMachine.setState(ServerState::MAINTENANCE);
+            logManager.logEvent(result ? "SET_MODE MAINTENANCE SUCCESS" : "SET_MODE MAINTENANCE FAILED");
+            return result ? "SUCCESS" : "ERROR: INVALID TRANSITION";
         }
 
         if (packet.data == "LOCKED") {
-            return stateMachine.setState(ServerState::LOCKED) ? "SUCCESS" : "ERROR: INVALID TRANSITION";
+            bool result = stateMachine.setState(ServerState::LOCKED);
+            logManager.logEvent(result ? "SET_MODE LOCKED SUCCESS" : "SET_MODE LOCKED FAILED");
+            return result ? "SUCCESS" : "ERROR: INVALID TRANSITION";
         }
 
+        logManager.logEvent("SET_MODE UNKNOWN MODE");
         return "ERROR: UNKNOWN MODE";
     }
 
-    // checking device ON request
+    // rejecting device commands in LOCKED or MAINTENANCE
+    if (stateMachine.getState() == ServerState::LOCKED ||
+        stateMachine.getState() == ServerState::MAINTENANCE) {
+
+        if (packet.command == CommandID::TURN_ON_DEVICE ||
+            packet.command == CommandID::TURN_OFF_DEVICE ||
+            packet.command == CommandID::GET_DEVICE_STATUS ||
+            packet.command == CommandID::GET_ALL_DEVICE_STATUS) {
+
+            logManager.logEvent("DEVICE COMMAND REJECTED - INVALID SERVER STATE");
+            return "ERROR: DEVICE COMMAND NOT ALLOWED IN CURRENT STATE";
+        }
+    }
+
+    // turning on device
     if (packet.command == CommandID::TURN_ON_DEVICE) {
-        if (!session.isAuthenticated()) {
-            return "ERROR: NOT AUTHENTICATED";
-        }
-
-        return deviceManager.turnOn(packet.data) ? "DEVICE TURNED ON" : "ERROR: DEVICE NOT FOUND";
+        bool result = deviceManager.turnOn(packet.data);
+        logManager.logEvent(result ? "DEVICE TURN ON SUCCESS" : "DEVICE TURN ON FAILED");
+        return result ? "SUCCESS" : "FAILURE";
     }
 
-    // checking device OFF request
+    // turning off device
     if (packet.command == CommandID::TURN_OFF_DEVICE) {
-        if (!session.isAuthenticated()) {
-            return "ERROR: NOT AUTHENTICATED";
-        }
-
-        return deviceManager.turnOff(packet.data) ? "DEVICE TURNED OFF" : "ERROR: DEVICE NOT FOUND";
+        bool result = deviceManager.turnOff(packet.data);
+        logManager.logEvent(result ? "DEVICE TURN OFF SUCCESS" : "DEVICE TURN OFF FAILED");
+        return result ? "SUCCESS" : "FAILURE";
     }
 
-    // checking device status request
+    // getting one device status
     if (packet.command == CommandID::GET_DEVICE_STATUS) {
-        if (!session.isAuthenticated()) {
-            return "ERROR: NOT AUTHENTICATED";
-        }
-
-        return deviceManager.getStatus(packet.data);
+        std::string status = deviceManager.getStatus(packet.data);
+        logManager.logEvent("GET_DEVICE_STATUS");
+        return status;
     }
 
+    // getting all device status
+    if (packet.command == CommandID::GET_ALL_DEVICE_STATUS) {
+        std::string statusList = deviceManager.getAllStatus();
+        logManager.logEvent("GET_ALL_DEVICE_STATUS");
+        return statusList;
+    }
+
+    logManager.logEvent("INVALID COMMAND");
     return "ERROR: INVALID COMMAND";
 }

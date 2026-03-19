@@ -1,0 +1,21 @@
+# --- C++ / IDE Junk ---
+*.exe
+*.o
+*.obj
+*.log
+.vscode/
+.vs/
+Debug/
+Release/
+bin/
+build/
+
+# --- Node / React Junk (for your wireframes) ---
+node_modules/
+npm-debug.log
+.env
+dist/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db

@@ -10,7 +10,9 @@ private:
     StateMachine& stateMachine;
 
 public:
+    // constructor
     RequestHandler(StateMachine& sm);
 
+    // handles incoming request
     std::string handleRequest(const Packet& packet, ClientSession& session);
 };

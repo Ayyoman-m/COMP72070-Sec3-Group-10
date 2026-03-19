@@ -1,6 +1,7 @@
 #include <iostream>
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/StateMachine.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/RequestHandler.h"
+#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/AuthManager.h"
 
 // STATE MACHINE TESTS
 
@@ -118,6 +119,38 @@ void testSetModeWithAuthWorks() {
     }
 }
 
+// test for valid login
+void testValidLogin() {
+    AuthManager auth;
+    ClientSession session;
+
+    bool result = auth.login("admin", "1234", session);
+
+    // checking if login worked
+    if (result && session.isAuthenticated()) {
+        std::cout << "PASS: Valid login works\n";
+    }
+    else {
+        std::cout << "FAIL: Valid login should succeed\n";
+    }
+}
+
+// test for invalid login
+void testInvalidLogin() {
+    AuthManager auth;
+    ClientSession session;
+
+    bool result = auth.login("admin", "wrong",session);
+
+    // checking if login fails correctly
+    if (!result && !session.isAuthenticated()) {
+        std::cout << "PASS: Invalid login rejected\n";
+    }
+    else {
+        std::cout << "FAIL: Invalid login should fail\n";
+    }
+}
+
 int main() {
     // running all tests one by one
 
@@ -131,6 +164,10 @@ int main() {
     testGetStatusInitiallyLocked();
     testSetModeWithoutAuthFails();
     testSetModeWithAuthWorks();
+
+    std::cout << "\n---- Running AuthManager Tests ----\n";
+    testValidLogin();
+    testInvalidLogin();
 
     return 0;
 }

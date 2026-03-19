@@ -1,1 +1,1 @@
-add_executable(SmartHomeServer main.cpp)
+add_executable(SmartHomeServer main.cpp packet.cpp)

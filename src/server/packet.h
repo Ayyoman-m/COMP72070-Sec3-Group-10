@@ -21,6 +21,7 @@ private:
     unsigned short checksum;
 
 public:
+
     Packet();
     Packet(unsigned short cmd, unsigned short status);
     Packet(const Packet& other);
@@ -41,6 +42,10 @@ public:
     char* getPayload() const;
     unsigned short getChecksum() const;
 
+    // Packet functions
+    unsigned short calculateChecksum() const;
+    bool isValid() const;
 
-
+    char* serialize(unsigned int& outSize) const;
+    bool deserialize(const char* data, unsigned int size);
 };

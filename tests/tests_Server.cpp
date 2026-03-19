@@ -2,6 +2,7 @@
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/StateMachine.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/RequestHandler.h"
 #include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/AuthManager.h"
+#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/DeviceManager.h"
 
 // STATE MACHINE TESTS
 
@@ -151,6 +152,49 @@ void testInvalidLogin() {
     }
 }
 
+// test turning device ON
+void testTurnOnDevice() {
+    DeviceManager dm;
+
+    bool result = dm.turnOn("LIGHT");
+
+    if (result && dm.getStatus("LIGHT") == "ON") {
+        std::cout << "PASS: LIGHT turned ON\n";
+    }
+    else {
+        std::cout << "FAIL: LIGHT should turn ON\n";
+    }
+}
+
+// test turning device OFF
+void testTurnOffDevice() {
+    DeviceManager dm;
+
+    dm.turnOn("FAN");
+    bool result = dm.turnOff("FAN");
+
+    if (result && dm.getStatus("FAN") == "OFF") {
+        std::cout << "PASS: FAN turned OFF\n";
+    }
+    else {
+        std::cout << "FAIL: FAN should turn OFF\n";
+    }
+}
+
+// test invalid device
+void testInvalidDevice() {
+    DeviceManager dm;
+
+    std::string result = dm.getStatus("TV");
+
+    if (result == "DEVICE NOT FOUND") {
+        std::cout << "PASS: Invalid device handled\n";
+    }
+    else {
+        std::cout << "FAIL: Invalid device should return error\n";
+    }
+}
+
 int main() {
     // running all tests one by one
 
@@ -168,6 +212,11 @@ int main() {
     std::cout << "\n---- Running AuthManager Tests ----\n";
     testValidLogin();
     testInvalidLogin();
+
+    std::cout << "\n---- Running DeviceManager Tests ----\n";
+    testTurnOnDevice();
+    testTurnOffDevice();
+    testInvalidDevice();
 
     return 0;
 }

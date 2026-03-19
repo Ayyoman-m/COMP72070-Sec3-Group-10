@@ -11,3 +11,6 @@ include_directories(src/shared)
 # Tell CMake where to find the code
 add_subdirectory(src/client)
 add_subdirectory(src/server)
+
+enable_testing()
+add_subdirectory(tests)

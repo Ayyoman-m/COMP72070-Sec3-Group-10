@@ -1,8 +1,11 @@
 # This creates a program that specifically runs your tests
-add_executable(SmartHomeTests test_main.cpp)
+add_executable(SmartHomeTests test_main.cpp "tests_Server.cpp")
+add_executable(Test_Server
+    tests_Server.cpp
+)
 
-# Link it to your shared logic so you can test Birendra's packets
-target_link_libraries(SmartHomeTests PRIVATE) 
+target_link_libraries(Test_Server PRIVATE server_lib)
 
-# This registers it with Visual Studio's "Test Explorer"
-add_test(NAME AllTests COMMAND SmartHomeTests)
+target_include_directories(Test_Server PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/server/Header
+)

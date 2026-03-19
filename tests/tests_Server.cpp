@@ -66,8 +66,9 @@ void testHomeToAway() {
 // This test checks if GET_STATUS returns LOCKED initially
 void testGetStatusInitiallyLocked() {
     StateMachine sm;
+    DeviceManager dm;
     ClientSession session;
-    RequestHandler handler(sm);
+    RequestHandler handler(sm,dm);
 
     Packet packet{ CommandID::GET_STATUS, "" };
 
@@ -84,8 +85,9 @@ void testGetStatusInitiallyLocked() {
 // This test checks that SET_MODE fails if user is not logged in
 void testSetModeWithoutAuthFails() {
     StateMachine sm;
+    DeviceManager dm;
     ClientSession session;
-    RequestHandler handler(sm);
+    RequestHandler handler(sm,dm);
 
     Packet packet{ CommandID::SET_MODE, "HOME" };
 
@@ -102,8 +104,9 @@ void testSetModeWithoutAuthFails() {
 // This test checks SET_MODE works after login
 void testSetModeWithAuthWorks() {
     StateMachine sm;
+    DeviceManager dm;
     ClientSession session;
-    RequestHandler handler(sm);
+    RequestHandler handler(sm,dm);
 
     // manually setting authentication (simulating login success)
     session.setAuthenticated(true);
@@ -195,6 +198,47 @@ void testInvalidDevice() {
     }
 }
 
+// test turning on device through request handler
+void testTurnOnDeviceThroughHandler() {
+    StateMachine sm;
+    DeviceManager dm;
+    ClientSession session;
+    RequestHandler handler(sm, dm);
+
+    session.setAuthenticated(true);
+
+    Packet packet{ CommandID::TURN_ON_DEVICE, "LIGHT" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "DEVICE TURNED ON" && dm.getStatus("LIGHT") == "ON") {
+        std::cout << "PASS: RequestHandler turns LIGHT ON\n";
+    }
+    else {
+        std::cout << "FAIL: RequestHandler should turn LIGHT ON\n";
+    }
+}
+
+// test getting device status through request handler
+void testGetDeviceStatusThroughHandler() {
+    StateMachine sm;
+    DeviceManager dm;
+    ClientSession session;
+    RequestHandler handler(sm, dm);
+
+    session.setAuthenticated(true);
+    dm.turnOn("FAN");
+
+    Packet packet{ CommandID::GET_DEVICE_STATUS, "FAN" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ON") {
+        std::cout << "PASS: RequestHandler gets device status\n";
+    }
+    else {
+        std::cout << "FAIL: RequestHandler should return device status\n";
+    }
+}
+
 int main() {
     // running all tests one by one
 
@@ -217,6 +261,11 @@ int main() {
     testTurnOnDevice();
     testTurnOffDevice();
     testInvalidDevice();
+
+    std::cout << "\n---- Running Device Integration Tests ----\n";
+    testTurnOnDeviceThroughHandler();
+    testGetDeviceStatusThroughHandler();
+
 
     return 0;
 }

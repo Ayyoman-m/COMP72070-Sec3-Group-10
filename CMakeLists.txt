@@ -12,5 +12,6 @@ include_directories(src/shared)
 add_subdirectory(src/client)
 add_subdirectory(src/server)
 
+
 enable_testing()
 add_subdirectory(tests)

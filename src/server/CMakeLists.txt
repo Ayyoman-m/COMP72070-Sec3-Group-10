@@ -1,5 +1,6 @@
 add_library(server_lib
     StateMachine.cpp
+    RequestHandler.cpp
 )
 
 target_include_directories(server_lib PUBLIC

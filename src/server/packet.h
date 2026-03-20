@@ -1,3 +1,5 @@
+#pragma once
+
 class Packet
 {
 private:
@@ -39,7 +41,7 @@ public:
     unsigned short getCommandId() const;
     unsigned short getStatusCode() const;
     unsigned int getPayloadLength() const;
-    char* getPayload() const;
+    const char* getPayload() const;
     unsigned short getChecksum() const;
 
     // Packet functions

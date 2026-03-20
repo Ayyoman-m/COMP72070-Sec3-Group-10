@@ -14,7 +14,7 @@ Packet::Packet()
     payload = nullptr;
 
     // TAIL
-    checksum = 0;
+    checksum = calculateChecksum();
 }
 
 Packet::Packet(unsigned short cmd, unsigned short status)
@@ -30,7 +30,7 @@ Packet::Packet(unsigned short cmd, unsigned short status)
     payload = nullptr;
 
     // TAIL
-    checksum = 0;
+    checksum = calculateChecksum();
 }
 
 Packet::Packet(const Packet& other)
@@ -161,7 +161,7 @@ unsigned int Packet::getPayloadLength() const
     return payloadLength;
 }
 
-char* Packet::getPayload() const
+const char* Packet::getPayload() const
 {
     return payload;
 }

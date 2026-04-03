@@ -1,4 +1,4 @@
-#include "Packet.h"
+#include "packet.h"
 #include <cstring>
 
 Packet::Packet()
@@ -183,7 +183,7 @@ unsigned short Packet::calculateChecksum() const
     sum += payloadLength;
 
     // BODY
-    for (unsigned int i = 0; i < payloadLength; i++)
+    for (unsigned int i = 0; payload != nullptr && i < payloadLength; i++)
     {
         sum += (unsigned char)payload[i];
     }
@@ -266,54 +266,55 @@ bool Packet::deserialize(const char* data, unsigned int size)
         return false;
     }
 
-    if (payload != nullptr)
-    {
-        delete[] payload;
-        payload = nullptr;
-    }
+    Packet parsedPacket;
 
     int index = 0;
 
     // HEADER
 
-    magicNumber = (unsigned char)data[index];
+    parsedPacket.magicNumber = (unsigned char)data[index];
     index += 1;
 
-    version = (unsigned char)data[index];
+    parsedPacket.version = (unsigned char)data[index];
     index += 1;
 
-    memcpy(&commandId, data + index, sizeof(commandId));
-    index += sizeof(commandId);
+    memcpy(&parsedPacket.commandId, data + index, sizeof(parsedPacket.commandId));
+    index += sizeof(parsedPacket.commandId);
 
-    memcpy(&statusCode, data + index, sizeof(statusCode));
-    index += sizeof(statusCode);
+    memcpy(&parsedPacket.statusCode, data + index, sizeof(parsedPacket.statusCode));
+    index += sizeof(parsedPacket.statusCode);
 
-    memcpy(&payloadLength, data + index, sizeof(payloadLength));
-    index += sizeof(payloadLength);
+    memcpy(&parsedPacket.payloadLength, data + index, sizeof(parsedPacket.payloadLength));
+    index += sizeof(parsedPacket.payloadLength);
 
     // Validate full size
-    if (size != (10 + payloadLength + 2))
+    if (size != (10 + parsedPacket.payloadLength + 2))
     {
-        payloadLength = 0;
         return false;
     }
 
     // BODY
 
-    if (payloadLength > 0)
+    if (parsedPacket.payloadLength > 0)
     {
-        payload = new char[payloadLength];
-        memcpy(payload, data + index, payloadLength);
-        index += payloadLength;
+        parsedPacket.payload = new char[parsedPacket.payloadLength];
+        memcpy(parsedPacket.payload, data + index, parsedPacket.payloadLength);
+        index += parsedPacket.payloadLength;
     }
     else
     {
-        payload = nullptr;
+        parsedPacket.payload = nullptr;
     }
 
     // TAIL
 
-    memcpy(&checksum, data + index, sizeof(checksum));
+    memcpy(&parsedPacket.checksum, data + index, sizeof(parsedPacket.checksum));
 
-    return isValid();
+    if (!parsedPacket.isValid())
+    {
+        return false;
+    }
+
+    *this = parsedPacket;
+    return true;
 }

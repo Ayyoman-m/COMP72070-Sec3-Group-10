@@ -1,5 +1,5 @@
 #pragma once
-#include "Packet.h"
+#include "packet.h"
 #include <winsock2.h>
 
 class NetworkManager

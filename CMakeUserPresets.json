@@ -26,17 +26,35 @@
     {
       "hidden": true,
       "name": "Qt-Default",
-      "inherits": null,
+      "inherits": "Qt 6.11.0",
       "vendor": {
         "qt-project.org/Default": {
-          "checksum": "VoalogTkyWuFomeO1TLFx0olLJ4="
+          "checksum": "CayDHrjRTyy2nGsLw140n9Ha+W0="
+        }
+      }
+    },
+    {
+      "hidden": true,
+      "name": "Qt 6.11.0",
+      "inherits": "Qt",
+      "environment": {
+        "QTDIR": "C:/Qt/6.11.0/msvc2022_64"
+      },
+      "architecture": {
+        "strategy": "external",
+        "value": "x64"
+      },
+      "generator": "Ninja",
+      "vendor": {
+        "qt-project.org/Version": {
+          "checksum": "Nw7XNptwmytmIqHZKERiuv7QJjs="
         }
       }
     }
   ],
   "vendor": {
     "qt-project.org/Presets": {
-      "checksum": "AEAIo4CHjThNSWVdVToug49W5yY="
+      "checksum": "2tL7Q9WpWSuLJNixBrczAgUEQRU="
     }
   }
 }

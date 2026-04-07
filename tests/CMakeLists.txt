@@ -1,7 +1,7 @@
 # Packet tests
 add_executable(PacketTests
     packet_tests.cpp
-    ../src/server/packet.cpp
+    ../src/server/NetworkPacket.cpp
 )
 
 target_include_directories(PacketTests PRIVATE
@@ -13,7 +13,7 @@ target_link_options(PacketTests PRIVATE /PROFILE)
 # NetworkManager tests
 add_executable(NetworkManagerTests
     network_manager_tests.cpp
-    ../src/server/packet.cpp
+    ../src/server/NetworkPacket.cpp
     ../src/server/NetworkManager.cpp
 )
 
@@ -23,6 +23,9 @@ target_include_directories(NetworkManagerTests PRIVATE
 
 target_link_libraries(NetworkManagerTests PRIVATE ws2_32)
 target_link_options(NetworkManagerTests PRIVATE /PROFILE)
+# Link ws2_32 to BOTH test projects
+target_link_libraries(PacketTests PRIVATE ws2_32)
+target_link_libraries(NetworkManagerTests PRIVATE ws2_32)
 
 function(add_named_case target case_name)
     add_test(NAME ${target}.${case_name} COMMAND ${target} ${case_name})

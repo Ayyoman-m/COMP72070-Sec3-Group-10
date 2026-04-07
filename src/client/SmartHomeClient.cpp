@@ -1,12 +1,29 @@
 #include "SmartHomeClient.h"
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QPushButton>
+#include <QLineEdit>
+#include <QStackedWidget>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsRectItem>
+#include <QPen>
+#include <QBrush>
 
-SmartHomeClient::SmartHomeClient(QWidget* parent) : QMainWindow(parent), isCommandPending(false) {
+SmartHomeClient::SmartHomeClient(QWidget* parent)
+    : QMainWindow(parent), isCommandPending(false)
+{
     // Initialize the 5-second rule timer
     commandTimer = new QTimer(this);
     commandTimer->setSingleShot(true);
     connect(commandTimer, &QTimer::timeout, this, &SmartHomeClient::onCommandTimeout);
 
     setupUi();
+}
+
+SmartHomeClient::~SmartHomeClient() {
+    // Qt's parent-child system handles most deletions, but good to have
 }
 
 void SmartHomeClient::setupUi() {
@@ -19,7 +36,7 @@ void SmartHomeClient::setupUi() {
     setupLoginScreen();
     setupDashboard();
 
-    // Start on the login screen (Index 0)
+    // Start on the login screen
     centralStack->setCurrentWidget(loginWidget);
 }
 
@@ -59,7 +76,7 @@ void SmartHomeClient::setupDashboard() {
     QVBoxLayout* layout = new QVBoxLayout(dashboardWidget);
 
     // --- Mode Display ---
-    QGroupBox* statusGroup = new QGroupBox("System Status", dashboardWidget);
+    statusGroup = new QGroupBox("System Status", dashboardWidget);
     QVBoxLayout* statusLayout = new QVBoxLayout(statusGroup);
     modeLabel = new QLabel("Current Mode: <b>HOME</b>", statusGroup);
     statusLayout->addWidget(modeLabel);
@@ -91,9 +108,8 @@ void SmartHomeClient::setupDashboard() {
     centralStack->addWidget(dashboardWidget);
 }
 
-// --- Logic Implementation ---
-
 void SmartHomeClient::attemptLogin() {
+    // Simple mock logic for authentication
     if (userEdit->text() == "admin" && passEdit->text() == "password") {
         centralStack->setCurrentWidget(dashboardWidget);
     }
@@ -113,8 +129,6 @@ void SmartHomeClient::sendCommand() {
     // Enforce the 5-second timeout rule
     commandTimer->start(5000);
 
-    // TODO: Birendra's packet logic goes here. Send the struct over the socket.
-
     // Mocking a successful server response after 2 seconds
     QTimer::singleShot(2000, this, &SmartHomeClient::simulateServerResponse);
 }
@@ -127,7 +141,7 @@ void SmartHomeClient::onCommandTimeout() {
 }
 
 void SmartHomeClient::simulateServerResponse() {
-    if (!isCommandPending) return; // Ignore if the 5 seconds already passed
+    if (!isCommandPending) return;
 
     commandTimer->stop();
     isCommandPending = false;

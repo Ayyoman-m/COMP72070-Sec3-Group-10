@@ -1,19 +1,26 @@
 #pragma once
 #include <string>
 
-// command types - now with numbers to match networking branch
-enum class CommandID : unsigned short {
-    LOGIN = 1,
-    GET_STATUS = 2,
-    SET_MODE = 3,
-    TURN_ON_DEVICE = 4,
-    TURN_OFF_DEVICE = 5,
-    GET_DEVICE_STATUS = 6,
-    GET_ALL_DEVICE_STATUS = 7,
-    INVALID = 0
+/**
+ * CommandID Enum: Used by the RequestHandler to identify
+ * which action the server needs to perform.
+ */
+enum class CommandID {
+    LOGIN,
+    GET_STATUS,
+    SET_MODE,
+    TURN_ON_DEVICE,
+    TURN_OFF_DEVICE,
+    GET_DEVICE_STATUS,
+    GET_ALL_DEVICE_STATUS,
+    INVALID
 };
 
-// simple packet used for server logic
+/**
+ * Logic Packet: A simple structure used for internal server processing.
+ * This member 'data' must be a std::string so that your logic can
+ * use .find(), .substr(), and comparison operators.
+ */
 struct Packet {
     CommandID command;
     std::string data;

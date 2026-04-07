@@ -1,25 +1,35 @@
-cmake_minimum_required(VERSION 3.10)
-project(SmartHomeSystem)
+# --- Client Configuration ---
 
-# Use C++17
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Enable Qt's automatic compilation tools
+# 1. Enable Qt's automatic compilation tools for this folder
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-# Find Qt6
+# 2. Find Qt6 Widgets
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
-# Include server folder so packets are accessible everywhere
-include_directories(src/server)
-include_directories(src/server/Header)
+# 3. Create the ClientApp target (CRITICAL: This must come before linking)
+add_executable(ClientApp 
+    main.cpp 
+    SmartHomeClient.cpp 
+    SmartHomeClient.h
+)
 
-# Tell CMake where to find the code
-add_subdirectory(src/server)
-add_subdirectory(src/client)
+# 4. Set include paths so the client can find server-side headers/packets
+target_include_directories(ClientApp PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src/server/Header
+    ${CMAKE_SOURCE_DIR}/src/server
+)
 
-enable_testing()
-add_subdirectory(tests)
+# 5. Link libraries: 
+# - server_lib: The shared logic from the server folder
+# - Qt6::Widgets: For the GUI
+# - ws2_32: The Windows Socket library
+target_link_libraries(ClientApp PRIVATE 
+    server_lib 
+    Qt6::Widgets 
+    ws2_32
+)
+
+# 6. Optional: Set output directory for the executable
+set_target_properties(ClientApp PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Packet.h"
+#include "Packet.h" // This will now be found in src/server/Header/Packet.h
 #include "ClientSession.h"
 #include "StateMachine.h"
 #include "DeviceManager.h"

@@ -1,56 +1,59 @@
 #pragma once
 
-#include <QtWidgets/QMainWindow>
-#include <QStackedWidget>
+#include <QMainWindow>
+#include <QWidget>
 #include <QPushButton>
-#include <QLineEdit>
 #include <QLabel>
-#include <QTimer>
+#include <QLineEdit>
 #include <QVBoxLayout>
+#include <QStackedWidget>
 #include <QGroupBox>
 #include <QGraphicsView>
 #include <QGraphicsScene>
-#include <QGraphicsRectItem>
+#include <QGraphicsItem>
+#include <QTimer>
 
-class SmartHomeClient : public QMainWindow {
+class SmartHomeClient : public QMainWindow { // Changed to QMainWindow to match .cpp
     Q_OBJECT
 
 public:
-    SmartHomeClient(QWidget* parent = nullptr);
-    ~SmartHomeClient() = default;
+    explicit SmartHomeClient(QWidget* parent = nullptr);
+    ~SmartHomeClient();
 
 private slots:
+    // Functional slots called by the UI
     void attemptLogin();
     void sendCommand();
     void onCommandTimeout();
-    void simulateServerResponse(); // Placeholder until POSIX sockets are wired
+    void simulateServerResponse();
 
 private:
+    // Initialization methods
     void setupUi();
     void setupLoginScreen();
     void setupDashboard();
 
-    // UI Navigation
+    // UI Layout Elements
     QStackedWidget* centralStack;
     QWidget* loginWidget;
     QWidget* dashboardWidget;
 
-    // Login Elements
+    // Login Screen Elements
     QLineEdit* userEdit;
     QLineEdit* passEdit;
     QLabel* loginStatusLabel;
 
     // Dashboard Elements
+    QGroupBox* statusGroup;
     QLabel* modeLabel;
-    QLabel* feedbackLabel;
-    QPushButton* sendCommandBtn;
-
-    // Interactive Floorplan
     QGraphicsView* floorplanView;
     QGraphicsScene* floorplanScene;
-    QGraphicsRectItem* testAppliance; // Represents a clickable device
+    QGraphicsRectItem* testAppliance; // Changed to RectItem based on .cpp usage
 
-    // Networking / Logic
+    QPushButton* sendCommandBtn;
+    QLabel* feedbackLabel;
+
+    // State Variables
     QTimer* commandTimer;
     bool isCommandPending;
 };

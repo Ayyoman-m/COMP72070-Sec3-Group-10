@@ -1,6 +1,11 @@
-#include <iostream>
+#include "SmartHomeServer.h"
+#include <QtWidgets/QApplication>
 
-int main() {
-    std::cout << "Smart Home Server Starting..." << std::endl;
-    return 0;
+int main(int argc, char* argv[]) {
+    QApplication a(argc, argv);
+
+    SmartHomeServer serverWindow;
+    serverWindow.show();
+
+    return a.exec();
 }

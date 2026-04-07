@@ -9,6 +9,7 @@ Debug/
 Release/
 bin/
 build/
+out/
 
 # --- Node / React Junk (for your wireframes) ---
 node_modules/

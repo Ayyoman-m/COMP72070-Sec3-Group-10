@@ -1,3 +1,4 @@
+# Packet tests
 add_executable(PacketTests
     packet_tests.cpp
     ../src/server/packet.cpp
@@ -9,6 +10,7 @@ target_include_directories(PacketTests PRIVATE
 
 target_link_options(PacketTests PRIVATE /PROFILE)
 
+# NetworkManager tests
 add_executable(NetworkManagerTests
     network_manager_tests.cpp
     ../src/server/packet.cpp
@@ -48,3 +50,16 @@ add_named_case(NetworkManagerTests receive_packet_rejects_invalid_checksum)
 add_named_case(NetworkManagerTests receive_packet_rejects_invalid_magic)
 add_named_case(NetworkManagerTests receive_packet_rejects_invalid_version)
 add_named_case(NetworkManagerTests receive_packet_fails_on_incomplete_payload)
+
+# Server tests
+add_executable(Test_Server
+    tests_Server.cpp
+)
+
+target_link_libraries(Test_Server PRIVATE server_lib)
+
+target_include_directories(Test_Server PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/server/Header
+)
+
+add_test(NAME AllServerTests COMMAND Test_Server)

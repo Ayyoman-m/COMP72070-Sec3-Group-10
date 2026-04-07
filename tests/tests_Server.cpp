@@ -1,10 +1,10 @@
 #include <iostream>
 #include<fstream>
-#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/StateMachine.h"
-#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/RequestHandler.h"
-#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/AuthManager.h"
-#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/DeviceManager.h"
-#include "C:\Users\RASIK\OneDrive\Desktop\Sem 4\Mobile and Network Environment\src\server\Header/LogManager.h"
+#include "../server/Header/StateMachine.h"
+#include "../server/Header/RequestHandler.h"
+#include "../server/Header/AuthManager.h"
+#include "../server/Header/DeviceManager.h"
+#include "../server/Header/LogManager.h"
 
 
 // STATE MACHINE TESTS

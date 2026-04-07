@@ -1,16 +1,12 @@
 #pragma once
 
 #include "Packet.h"
-#pragma once
-
-#include "Packet.h"
 #include "ClientSession.h"
 #include "StateMachine.h"
 #include "DeviceManager.h"
 #include "LogManager.h"
 #include <string>
 
-// this class handles incoming requests
 class RequestHandler {
 private:
     StateMachine& stateMachine;
@@ -18,9 +14,13 @@ private:
     LogManager& logManager;
 
 public:
-    // constructor
     RequestHandler(StateMachine& sm, DeviceManager& dm, LogManager& lm);
 
-    // handles request and returns response
+    // handles server-side string-based packet
     std::string handleRequest(const Packet& packet, ClientSession& session);
+
+    // NEW: handles real network binary packet from networking branch
+    std::string handleNetworkPacket(unsigned short commandId,
+        const std::string& data,
+        ClientSession& session);
 };

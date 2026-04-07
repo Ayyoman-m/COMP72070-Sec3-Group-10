@@ -128,3 +128,27 @@ std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& s
     logManager.logEvent("INVALID COMMAND");
     return "ERROR: INVALID COMMAND";
 }
+
+// This bridges the networking binary Packet to the server string-based logic
+std::string RequestHandler::handleNetworkPacket(unsigned short commandId,
+    const std::string& data,
+    ClientSession& session)
+{
+    // convert numeric commandId to server's CommandID enum
+    Packet packet;
+    packet.data = data;
+
+    switch (commandId)
+    {
+    case 1:  packet.command = CommandID::LOGIN;                 break;
+    case 2:  packet.command = CommandID::GET_STATUS;            break;
+    case 3:  packet.command = CommandID::SET_MODE;              break;
+    case 4:  packet.command = CommandID::TURN_ON_DEVICE;        break;
+    case 5:  packet.command = CommandID::TURN_OFF_DEVICE;       break;
+    case 6:  packet.command = CommandID::GET_DEVICE_STATUS;     break;
+    case 7:  packet.command = CommandID::GET_ALL_DEVICE_STATUS; break;
+    default: packet.command = CommandID::INVALID;               break;
+    }
+
+    return handleRequest(packet, session);
+}

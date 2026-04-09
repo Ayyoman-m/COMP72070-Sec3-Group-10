@@ -1,59 +1,71 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
 #include <QMainWindow>
-#include <QWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QLineEdit>
-#include <QVBoxLayout>
 #include <QStackedWidget>
-#include <QGroupBox>
-#include <QGraphicsView>
-#include <QGraphicsScene>
-#include <QGraphicsItem>
-#include <QTimer>
+#include <vector>
+#include <QString>
 
-class SmartHomeClient : public QMainWindow { // Changed to QMainWindow to match .cpp
+#include "pages/HomePage.h"
+#include "pages/MapPage.h"
+#include "pages/ProfilePage.h"
+#include "pages/SettingsPage.h"
+#include "pages/RoomDetailPage.h"
+#include "pages/SignUpPage.h"
+
+class SmartHomeClient : public QMainWindow {
     Q_OBJECT
 
 public:
+    struct UserAccount {
+        QString username;
+        QString password;
+        QString email;
+    };
+
     explicit SmartHomeClient(QWidget* parent = nullptr);
     ~SmartHomeClient();
 
 private slots:
-    // Functional slots called by the UI
+    // Authentication & Navigation
     void attemptLogin();
-    void sendCommand();
-    void onCommandTimeout();
-    void simulateServerResponse();
+    void showSignUpPage();
+    void handleNewRegistration(QString user, QString pass, QString email);
+
+    // Page Routing
+    void onRoomSelected(const QString& roomName);
+    void onDeviceSelected(const QString& deviceId); // New: From Map
+    void toggleSidebar();
 
 private:
-    // Initialization methods
     void setupUi();
-    void setupLoginScreen();
-    void setupDashboard();
+    void setupSidebar();
+    void setupPages();
 
-    // UI Layout Elements
+    // Networking Core (Requirement: Real Connection Check)
+    bool connectToServer(const std::string& ip, int port);
+
+    bool isSidebarCollapsed;
+
     QStackedWidget* centralStack;
+    QStackedWidget* pageStack;
+
     QWidget* loginWidget;
     QWidget* dashboardWidget;
+    QWidget* sidebar;
 
-    // Login Screen Elements
+    HomePage* homePage;
+    MapPage* mapPage;
+    ProfilePage* profilePage;
+    SettingsPage* settingsPage;
+    RoomDetailPage* roomDetailPage;
+    SignUpPage* signUpPage;
+
     QLineEdit* userEdit;
     QLineEdit* passEdit;
     QLabel* loginStatusLabel;
 
-    // Dashboard Elements
-    QGroupBox* statusGroup;
-    QLabel* modeLabel;
-    QGraphicsView* floorplanView;
-    QGraphicsScene* floorplanScene;
-    QGraphicsRectItem* testAppliance; // Changed to RectItem based on .cpp usage
-
-    QPushButton* sendCommandBtn;
-    QLabel* feedbackLabel;
-
-    // State Variables
-    QTimer* commandTimer;
-    bool isCommandPending;
+    SOCKET clientSocket;
+    std::vector<UserAccount> localUserDb;
 };

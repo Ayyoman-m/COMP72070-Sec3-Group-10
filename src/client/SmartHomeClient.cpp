@@ -1,155 +1,219 @@
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "SmartHomeClient.h"
+#include "StyleManager.h"
+#include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QGroupBox>
-#include <QLabel>
 #include <QPushButton>
-#include <QLineEdit>
-#include <QStackedWidget>
-#include <QGraphicsView>
-#include <QGraphicsScene>
-#include <QGraphicsRectItem>
-#include <QPen>
-#include <QBrush>
+#include <QStyle>
+
+// Crucial: These includes must be here so the compiler knows the Signal/Slot signatures
+#include "pages/HomePage.h"
+#include "pages/SignUpPage.h"
+#include "pages/RoomDetailPage.h"
 
 SmartHomeClient::SmartHomeClient(QWidget* parent)
-    : QMainWindow(parent), isCommandPending(false)
+    : QMainWindow(parent), isSidebarCollapsed(false), clientSocket(INVALID_SOCKET)
 {
-    // Initialize the 5-second rule timer
-    commandTimer = new QTimer(this);
-    commandTimer->setSingleShot(true);
-    connect(commandTimer, &QTimer::timeout, this, &SmartHomeClient::onCommandTimeout);
+    // Requirement #7: Initialize local DB
+    localUserDb.push_back({ "admin", "password", "admin@smarthome.pro" });
+
+    // Networking Init
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     setupUi();
+    this->setStyleSheet(StyleManager::getMainWindowStyle());
 }
 
 SmartHomeClient::~SmartHomeClient() {
-    // Qt's parent-child system handles most deletions, but good to have
+    if (clientSocket != INVALID_SOCKET) closesocket(clientSocket);
+    WSACleanup();
 }
 
 void SmartHomeClient::setupUi() {
-    this->setWindowTitle("Smart Home Control Panel");
-    this->resize(800, 600);
+    this->setWindowTitle("SmartHome Pro v2.0");
+    this->resize(1200, 800);
 
     centralStack = new QStackedWidget(this);
     this->setCentralWidget(centralStack);
 
-    setupLoginScreen();
-    setupDashboard();
+    // LOGIN SCREEN
+    loginWidget = new QWidget();
+    QVBoxLayout* lLayout = new QVBoxLayout(loginWidget);
+    lLayout->setContentsMargins(350, 150, 350, 150);
 
-    // Start on the login screen
+    userEdit = new QLineEdit();
+    userEdit->setPlaceholderText("Username");
+    userEdit->setStyleSheet(StyleManager::getLoginInputStyle());
+
+    passEdit = new QLineEdit();
+    passEdit->setPlaceholderText("Password");
+    passEdit->setEchoMode(QLineEdit::Password);
+    passEdit->setStyleSheet(StyleManager::getLoginInputStyle());
+
+    QPushButton* btnLogin = new QPushButton("LOGIN");
+    btnLogin->setStyleSheet("background-color: #61AFEF; color: #12151A; font-weight: bold; padding: 12px; border-radius: 5px;");
+
+    QPushButton* btnGoToSignUp = new QPushButton("Don't have an account? Sign Up");
+    btnGoToSignUp->setStyleSheet("background: transparent; color: #ABB2BF; border: none; text-decoration: underline;");
+
+    loginStatusLabel = new QLabel("");
+    loginStatusLabel->setAlignment(Qt::AlignCenter);
+
+    lLayout->addWidget(new QLabel("<h1 style='color:#61AFEF; text-align:center;'>SmartHome Access</h1>"));
+    lLayout->addWidget(userEdit);
+    lLayout->addWidget(passEdit);
+    lLayout->addWidget(btnLogin);
+    lLayout->addWidget(btnGoToSignUp);
+    lLayout->addWidget(loginStatusLabel);
+    lLayout->addStretch();
+
+    // Fix for E0304: Use QObject::connect to avoid conflict with winsock connect()
+    QObject::connect(btnLogin, &QPushButton::clicked, this, &SmartHomeClient::attemptLogin);
+    QObject::connect(btnGoToSignUp, &QPushButton::clicked, this, &SmartHomeClient::showSignUpPage);
+
+    centralStack->addWidget(loginWidget);
+
+    // DASHBOARD SHELL
+    dashboardWidget = new QWidget();
+    QHBoxLayout* dashLayout = new QHBoxLayout(dashboardWidget);
+    dashLayout->setSpacing(0); dashLayout->setContentsMargins(0, 0, 0, 0);
+
+    setupSidebar();
+    setupPages();
+
+    dashLayout->addWidget(sidebar);
+    dashLayout->addWidget(pageStack);
+    centralStack->addWidget(dashboardWidget);
+
     centralStack->setCurrentWidget(loginWidget);
 }
 
-void SmartHomeClient::setupLoginScreen() {
-    loginWidget = new QWidget();
-    QVBoxLayout* layout = new QVBoxLayout(loginWidget);
+void SmartHomeClient::setupSidebar() {
+    sidebar = new QWidget();
+    sidebar->setObjectName("Sidebar");
+    sidebar->setFixedWidth(200);
+    sidebar->setStyleSheet(StyleManager::getSidebarStyle());
 
-    QLabel* title = new QLabel("<h2>Smart Home Login</h2>", loginWidget);
-    title->setAlignment(Qt::AlignCenter);
+    QVBoxLayout* layout = new QVBoxLayout(sidebar);
+    layout->addWidget(new QLabel("<h3 style='color:#61AFEF; padding: 15px;'>PRO HUB</h3>"));
 
-    userEdit = new QLineEdit(loginWidget);
-    userEdit->setPlaceholderText("Username");
+    QPushButton* btnHome = new QPushButton(" ⌂  DASHBOARD");
+    QPushButton* btnMap = new QPushButton(" 🗺️  FLOORPLAN");
+    QPushButton* btnUser = new QPushButton(" 👤  PROFILE");
+    QPushButton* btnSet = new QPushButton(" ⚙️  SETTINGS");
 
-    passEdit = new QLineEdit(loginWidget);
-    passEdit->setPlaceholderText("Password");
-    passEdit->setEchoMode(QLineEdit::Password);
-
-    QPushButton* loginBtn = new QPushButton("Login", loginWidget);
-    loginStatusLabel = new QLabel("", loginWidget);
-    loginStatusLabel->setStyleSheet("color: red;");
-
-    connect(loginBtn, &QPushButton::clicked, this, &SmartHomeClient::attemptLogin);
-
+    layout->addWidget(btnHome);
+    layout->addWidget(btnMap);
+    layout->addWidget(btnUser);
     layout->addStretch();
-    layout->addWidget(title);
-    layout->addWidget(userEdit);
-    layout->addWidget(passEdit);
-    layout->addWidget(loginBtn);
-    layout->addWidget(loginStatusLabel);
-    layout->addStretch();
+    layout->addWidget(btnSet);
 
-    centralStack->addWidget(loginWidget);
+    QObject::connect(btnHome, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(homePage); });
+    QObject::connect(btnMap, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(mapPage); });
+    QObject::connect(btnUser, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(profilePage); });
+    QObject::connect(btnSet, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(settingsPage); });
 }
 
-void SmartHomeClient::setupDashboard() {
-    dashboardWidget = new QWidget();
-    QVBoxLayout* layout = new QVBoxLayout(dashboardWidget);
+void SmartHomeClient::setupPages() {
+    pageStack = new QStackedWidget();
 
-    // --- Mode Display ---
-    statusGroup = new QGroupBox("System Status", dashboardWidget);
-    QVBoxLayout* statusLayout = new QVBoxLayout(statusGroup);
-    modeLabel = new QLabel("Current Mode: <b>HOME</b>", statusGroup);
-    statusLayout->addWidget(modeLabel);
+    homePage = new HomePage();
+    mapPage = new MapPage();
+    profilePage = new ProfilePage();
+    settingsPage = new SettingsPage();
+    roomDetailPage = new RoomDetailPage();
+    signUpPage = new SignUpPage();
 
-    // --- Interactive Floorplan ---
-    floorplanScene = new QGraphicsScene(this);
-    floorplanView = new QGraphicsView(floorplanScene, dashboardWidget);
-    floorplanView->setMinimumHeight(300);
+    pageStack->addWidget(homePage);
+    pageStack->addWidget(mapPage);
+    pageStack->addWidget(profilePage);
+    pageStack->addWidget(settingsPage);
+    pageStack->addWidget(roomDetailPage);
 
-    // Add a mockup appliance (a red square representing a light or heater)
-    testAppliance = floorplanScene->addRect(0, 0, 50, 50, QPen(Qt::black), QBrush(Qt::red));
-    testAppliance->setFlag(QGraphicsItem::ItemIsSelectable);
+    centralStack->addWidget(signUpPage);
 
-    QLabel* floorplanInstructions = new QLabel("Floorplan View: Select an appliance above.", dashboardWidget);
+    // Fix for E0304: Explicit QObject scope for all connections
+    QObject::connect(homePage, &HomePage::roomClicked, this, &SmartHomeClient::onRoomSelected);
+    QObject::connect(mapPage, &MapPage::roomRequested, this, &SmartHomeClient::onRoomSelected);
+    QObject::connect(mapPage, &MapPage::deviceRequested, this, &SmartHomeClient::onDeviceSelected);
 
-    // --- Controls & Feedback ---
-    sendCommandBtn = new QPushButton("Send Test Command", dashboardWidget);
-    feedbackLabel = new QLabel("System Ready.", dashboardWidget);
-    feedbackLabel->setStyleSheet("color: blue;");
+    QObject::connect(roomDetailPage, &RoomDetailPage::backButtonClicked, [this]() {
+        pageStack->setCurrentWidget(homePage);
+        });
 
-    connect(sendCommandBtn, &QPushButton::clicked, this, &SmartHomeClient::sendCommand);
+    QObject::connect(signUpPage, &SignUpPage::registrationRequested, this, &SmartHomeClient::handleNewRegistration);
+    QObject::connect(signUpPage, &SignUpPage::backToLoginRequested, [this]() {
+        centralStack->setCurrentWidget(loginWidget);
+        });
+}
 
-    layout->addWidget(statusGroup);
-    layout->addWidget(floorplanView);
-    layout->addWidget(floorplanInstructions);
-    layout->addWidget(sendCommandBtn);
-    layout->addWidget(feedbackLabel);
+bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
+    if (clientSocket != INVALID_SOCKET) closesocket(clientSocket);
+    clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET) return false;
 
-    centralStack->addWidget(dashboardWidget);
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);
+    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+
+    // This is the Winsock connect, NOT the Qt connect
+    if (::connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        closesocket(clientSocket);
+        clientSocket = INVALID_SOCKET;
+        return false;
+    }
+    return true;
 }
 
 void SmartHomeClient::attemptLogin() {
-    // Simple mock logic for authentication
-    if (userEdit->text() == "admin" && passEdit->text() == "password") {
-        centralStack->setCurrentWidget(dashboardWidget);
+    if (!connectToServer("127.0.0.1", 8080)) {
+        loginStatusLabel->setText("SYSTEM ERROR: Server Offline");
+        loginStatusLabel->setStyleSheet("color: #E06C75; font-weight: bold;");
+        return;
     }
+
+    QString inputUser = userEdit->text();
+    QString inputPass = passEdit->text();
+    bool found = false;
+    for (const auto& account : localUserDb) {
+        if (account.username == inputUser && account.password == inputPass) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) centralStack->setCurrentWidget(dashboardWidget);
     else {
-        loginStatusLabel->setText("Invalid Credentials. Try admin/password");
+        loginStatusLabel->setText("Access Denied: Invalid Credentials");
+        loginStatusLabel->setStyleSheet("color: #E06C75;");
     }
 }
 
-void SmartHomeClient::sendCommand() {
-    if (isCommandPending) return;
-
-    isCommandPending = true;
-    sendCommandBtn->setEnabled(false);
-    feedbackLabel->setText("Sending command... Waiting for server response.");
-    feedbackLabel->setStyleSheet("color: orange;");
-
-    // Enforce the 5-second timeout rule
-    commandTimer->start(5000);
-
-    // Mocking a successful server response after 2 seconds
-    QTimer::singleShot(2000, this, &SmartHomeClient::simulateServerResponse);
+void SmartHomeClient::handleNewRegistration(QString user, QString pass, QString email) {
+    localUserDb.push_back({ user, pass, email });
+    centralStack->setCurrentWidget(loginWidget);
+    loginStatusLabel->setText("Registration Successful! Please Login.");
+    loginStatusLabel->setStyleSheet("color: #98C379;");
 }
 
-void SmartHomeClient::onCommandTimeout() {
-    isCommandPending = false;
-    sendCommandBtn->setEnabled(true);
-    feedbackLabel->setText("Error: Command failed. Server timeout (5 seconds exceeded).");
-    feedbackLabel->setStyleSheet("color: red;");
+void SmartHomeClient::showSignUpPage() {
+    centralStack->setCurrentWidget(signUpPage);
 }
 
-void SmartHomeClient::simulateServerResponse() {
-    if (!isCommandPending) return;
+void SmartHomeClient::onRoomSelected(const QString& roomName) {
+    roomDetailPage->loadRoom(roomName);
+    pageStack->setCurrentWidget(roomDetailPage);
+}
 
-    commandTimer->stop();
-    isCommandPending = false;
-    sendCommandBtn->setEnabled(true);
+void SmartHomeClient::onDeviceSelected(const QString& deviceId) {
+    if (deviceId.contains("LR")) onRoomSelected("Living Room");
+    else if (deviceId.contains("KITCHEN")) onRoomSelected("Kitchen");
+    else onRoomSelected("Living Room");
+}
 
-    feedbackLabel->setText("Success: Appliance state updated.");
-    feedbackLabel->setStyleSheet("color: green;");
-
-    // Visually update the interactive floorplan appliance
-    testAppliance->setBrush(QBrush(Qt::green));
+void SmartHomeClient::toggleSidebar() {
+    isSidebarCollapsed = !isSidebarCollapsed;
+    sidebar->setFixedWidth(isSidebarCollapsed ? 60 : 200);
 }

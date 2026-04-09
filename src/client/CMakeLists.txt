@@ -1,6 +1,6 @@
 # --- Client Configuration ---
 
-# 1. Enable Qt's automatic compilation tools for this folder
+# 1. Enable Qt's automatic compilation tools
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -8,28 +8,51 @@ set(CMAKE_AUTORCC ON)
 # 2. Find Qt6 Widgets
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
-# 3. Create the ClientApp target (CRITICAL: This must come before linking)
-add_executable(ClientApp 
-    main.cpp 
-    SmartHomeClient.cpp 
-    SmartHomeClient.h
+# 3. Define the File Lists
+set(CLIENT_SOURCES
+    main.cpp
+    SmartHomeClient.cpp
+    pages/HomePage.cpp
+    pages/MapPage.cpp
+    pages/ProfilePage.cpp
+    pages/SettingsPage.cpp
+    pages/RoomDetailPage.cpp
+    components/ClimateWidget.cpp
 )
 
-# 4. Set include paths so the client can find server-side headers/packets
+set(CLIENT_HEADERS
+    SmartHomeClient.h
+    pages/HomePage.h
+    pages/MapPage.h
+    pages/ProfilePage.h
+    pages/SettingsPage.h
+    pages/RoomDetailPage.h
+    components/ClimateWidget.h
+    StyleManager.h
+)
+
+# 4. Create the ClientApp target (ONLY ONCE)
+add_executable(ClientApp ${CLIENT_SOURCES} ${CLIENT_HEADERS} "pages/SignUpPage.h" "pages/SignUpPage.cpp")
+
+# 5. Set include paths (Combined Server + UI folders)
 target_include_directories(ClientApp PRIVATE 
+    # Server/Networking headers
     ${CMAKE_SOURCE_DIR}/src/server/Header
     ${CMAKE_SOURCE_DIR}/src/server
+    # Local UI folders
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/pages
+    ${CMAKE_CURRENT_SOURCE_DIR}/components
 )
 
-# 5. Link libraries: 
-# - server_lib: The shared logic from the server folder
-# - Qt6::Widgets: For the GUI
-# - ws2_32: The Windows Socket library
+# 6. Link libraries
 target_link_libraries(ClientApp PRIVATE 
     server_lib 
     Qt6::Widgets 
     ws2_32
 )
 
-# 6. Optional: Set output directory for the executable
-set_target_properties(ClientApp PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+# 7. Set output directory
+set_target_properties(ClientApp PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

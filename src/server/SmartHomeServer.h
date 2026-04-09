@@ -1,30 +1,46 @@
 #pragma once
 
-#include <QtWidgets/QMainWindow>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QVBoxLayout>
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <thread> 
+#include <string>
+#include <vector>
+
+// Include your packet logic
+#include "NetworkPacket.h"
+
+// Qt Includes
+#include <QMainWindow>
 #include <QLabel>
+#include <QPushButton>
+#include <QTextEdit>
+#include <QVBoxLayout>
 
 class SmartHomeServer : public QMainWindow {
     Q_OBJECT
 
 public:
-    SmartHomeServer(QWidget* parent = nullptr);
-    ~SmartHomeServer() = default;
-
-    // Public function so your future socket code can easily print here
-    void logMessage(const QString& msg);
+    explicit SmartHomeServer(QWidget* parent = nullptr);
+    ~SmartHomeServer();
 
 private slots:
     void toggleServer();
 
 private:
     void setupUi();
+    void logMessage(const QString& msg);
 
+    // Networking Logic
+    void startListening();
+    void stopNetworking();
+    void processPacket(const NetworkPacket& packet);
+
+    SOCKET serverSocket;
+    bool isRunning;
+    std::thread* listenerThread;
+
+    // UI Elements
+    QLabel* statusLabel;
     QPushButton* startStopBtn;
     QTextEdit* logConsole;
-    QLabel* statusLabel;
-
-    bool isRunning;
 };

@@ -1,10 +1,7 @@
 #pragma once
 
 #include <QWidget>
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QCheckBox>
-#include <QLineEdit>
+#include <QString>
 
 class SettingsPage : public QWidget {
     Q_OBJECT
@@ -15,9 +12,7 @@ public:
 private:
     void setupUi();
 
-    // Helpers for different setting types
-    QWidget* createToggleSetting(QString title, QString description);
-    QWidget* createInputSetting(QString title, QString placeholder);
-
-    QVBoxLayout* mainLayout;
+    // These declarations are the "missing members" the compiler is looking for:
+    QWidget* createSectionHeader(QString title);
+    QWidget* createSettingRow(QString title, QString description);
 };

@@ -32,7 +32,7 @@ set(CLIENT_HEADERS
 )
 
 # 4. Create the ClientApp target (ONLY ONCE)
-add_executable(ClientApp ${CLIENT_SOURCES} ${CLIENT_HEADERS} "pages/SignUpPage.h" "pages/SignUpPage.cpp")
+add_executable(ClientApp ${CLIENT_SOURCES} ${CLIENT_HEADERS} "pages/SignUpPage.h" "pages/SignUpPage.cpp" "NetworkManager.cpp" "NetworkManager.h")
 
 # 5. Set include paths (Combined Server + UI folders)
 target_include_directories(ClientApp PRIVATE 

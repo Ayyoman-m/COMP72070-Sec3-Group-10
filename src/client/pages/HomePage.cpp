@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollArea>
+#include <QComboBox>
 
 HomePage::HomePage(QWidget* parent) : QWidget(parent) {
     setupUi();
@@ -13,28 +14,47 @@ void HomePage::setupUi() {
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(10);
 
+    // 1. Create and add the Top Bar
     mainLayout->addWidget(createTopBar());
 
+    // 2. Setup the view stack for Grid/List toggling
     viewStack = new QStackedWidget();
     viewStack->addWidget(createGridView());
     viewStack->addWidget(createListView());
 
     mainLayout->addWidget(viewStack);
 
-    switchToGrid();
+    switchToGrid(); // Default to Grid view
 }
 
 QWidget* HomePage::createTopBar() {
     QWidget* bar = new QWidget();
     bar->setObjectName("StatusBar");
-    bar->setFixedHeight(60);
+    bar->setFixedHeight(70);
     bar->setStyleSheet(StyleManager::getStatusBarStyle());
 
     QHBoxLayout* layout = new QHBoxLayout(bar);
 
-    globalTempLabel = new QLabel("Home Avg: 21.8°C");
-    activeLightsLabel = new QLabel("Systems: Nominal"); // Requirement #6 (Simplified for Dashboard)
+    // --- INITIALIZATION (Critical to prevent crashes) ---
 
+    // Global Status
+    globalTempLabel = new QLabel("Home Avg: 21.8°C");
+    globalTempLabel->setStyleSheet("color: #ABB2BF; font-weight: bold;");
+
+    // Mode Selector (Fulfills REQ-SVR-030)
+    modeSelector = new QComboBox();
+    modeSelector->addItems({ "LOCKED", "HOME", "AWAY", "MAINTENANCE" });
+    modeSelector->setFixedWidth(130);
+    modeSelector->setStyleSheet(
+        "QComboBox { background: #2C313C; color: #61AFEF; border: 1px solid #61AFEF; border-radius: 4px; padding: 5px; font-weight: bold; }"
+        "QComboBox QAbstractItemView { background-color: #1E222A; color: #ABB2BF; selection-background-color: #61AFEF; }"
+    );
+
+    connect(modeSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
+        emit modeChangeRequested(index);
+        });
+
+    // Toggle Buttons
     btnGrid = new QPushButton("GRID");
     btnList = new QPushButton("LIST");
     btnGrid->setFixedSize(60, 30);
@@ -43,12 +63,17 @@ QWidget* HomePage::createTopBar() {
     connect(btnGrid, &QPushButton::clicked, this, &HomePage::switchToGrid);
     connect(btnList, &QPushButton::clicked, this, &HomePage::switchToList);
 
+    // --- LAYOUT ARRANGEMENT ---
     layout->addWidget(new QLabel("<h3 style='color:#61AFEF;'>DASHBOARD</h3>"));
-    layout->addSpacing(40);
-    layout->addWidget(globalTempLabel);
-    layout->addSpacing(20);
-    layout->addWidget(activeLightsLabel);
     layout->addStretch();
+
+    layout->addWidget(new QLabel("SYSTEM MODE:"));
+    layout->addWidget(modeSelector);
+    layout->addSpacing(20);
+
+    layout->addWidget(globalTempLabel);
+    layout->addSpacing(40);
+
     layout->addWidget(btnGrid);
     layout->addWidget(btnList);
 
@@ -76,7 +101,6 @@ QWidget* HomePage::createGridView() {
     QGridLayout* grid = new QGridLayout(container);
     grid->setSpacing(20);
 
-    // Synchronized Room List
     QStringList rooms = { "Living Room", "Kitchen", "Master Bedroom", "Guest Room", "Bathroom", "Garage", "Backyard" };
     int row = 0, col = 0;
     for (const QString& name : rooms) {
@@ -126,7 +150,6 @@ QWidget* HomePage::createRoomCard(QString name, QString status) {
     l->addWidget(statLbl);
     l->addStretch();
 
-    // Transparent button overlay to handle the click
     QPushButton* btn = new QPushButton(card);
     btn->setFixedSize(250, 150);
     btn->setStyleSheet("background:transparent; border:none;");
@@ -136,7 +159,6 @@ QWidget* HomePage::createRoomCard(QString name, QString status) {
     return card;
 }
 
-// Requirement #4: Swapped "ENTER" for "VIEW"
 QWidget* HomePage::createRoomRow(QString name, QString status) {
     QWidget* row = new QWidget();
     row->setStyleSheet("background: #1E222A; border-radius: 8px; border: 1px solid #2C313C;");
@@ -153,7 +175,6 @@ QWidget* HomePage::createRoomRow(QString name, QString status) {
     statLbl->setStyleSheet("color: #ABB2BF; margin-right: 20px;");
     l->addWidget(statLbl);
 
-    // CHANGED: "ENTER" -> "VIEW"
     QPushButton* btn = new QPushButton("VIEW");
     btn->setFixedSize(70, 30);
     btn->setCursor(Qt::PointingHandCursor);

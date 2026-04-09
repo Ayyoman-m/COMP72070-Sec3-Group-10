@@ -33,7 +33,9 @@ private:
     // Networking Logic
     void startListening();
     void stopNetworking();
-    void processPacket(const NetworkPacket& packet);
+
+    // UPDATED: Must match the .cpp signature to handle responses/images
+    void processPacket(const NetworkPacket& packet, SOCKET clientSocket);
 
     SOCKET serverSocket;
     bool isRunning;

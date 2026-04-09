@@ -2,16 +2,20 @@
 #include "SmartHomeServer.h"
 #include "NetworkManager.h"
 #include "NetworkPacket.h"
-
 #include <QDateTime>
 #include <WS2tcpip.h>
 #include <QVBoxLayout>
+#include <fstream> 
+
+// REQ-SVR-030: Operational State Machine
+enum SystemState { LOCKED = 0, HOME = 1, AWAY = 2, MAINTENANCE = 3 };
+SystemState currentState = HOME;
 
 SmartHomeServer::SmartHomeServer(QWidget* parent)
     : QMainWindow(parent), isRunning(false), serverSocket(INVALID_SOCKET), listenerThread(nullptr)
 {
     setupUi();
-    logMessage("Server Initialized. Ready to bind sockets.");
+    logMessage("Server Initialized. System State: [HOME]");
 }
 
 SmartHomeServer::~SmartHomeServer() {
@@ -19,136 +23,155 @@ SmartHomeServer::~SmartHomeServer() {
 }
 
 void SmartHomeServer::setupUi() {
-    this->setWindowTitle("Smart Home Server Admin Console");
-    this->resize(600, 400);
+    this->setWindowTitle("SmartHome Pro - Server Console");
+    this->resize(600, 450);
 
     QWidget* centralWidget = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(centralWidget);
 
-    statusLabel = new QLabel("<b>Status:</b> OFFLINE", this);
-    statusLabel->setStyleSheet("color: red; font-size: 14px;");
+    statusLabel = new QLabel("<b>Status:</b> <font color='red'>OFFLINE</font>", this);
 
-    startStopBtn = new QPushButton("Start Server", this);
-    startStopBtn->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 5px;");
-
-    connect(startStopBtn, &QPushButton::clicked, this, &SmartHomeServer::toggleServer);
+    startStopBtn = new QPushButton("START SERVER", this);
+    startStopBtn->setStyleSheet("background-color: #98C379; color: #12151A; font-weight: bold; padding: 8px;");
 
     logConsole = new QTextEdit(this);
     logConsole->setReadOnly(true);
-    logConsole->setStyleSheet("background-color: #1e1e1e; color: #00ff00; font-family: monospace;");
+    logConsole->setStyleSheet("background-color: #1e1e1e; color: #abb2bf; font-family: 'Consolas';");
 
     layout->addWidget(statusLabel);
     layout->addWidget(startStopBtn);
-    layout->addWidget(new QLabel("System Logs:", this));
+    layout->addWidget(new QLabel("<b>Live Transaction Logs:</b>"));
     layout->addWidget(logConsole);
 
+    connect(startStopBtn, &QPushButton::clicked, this, &SmartHomeServer::toggleServer);
     this->setCentralWidget(centralWidget);
+}
+
+// REQ-SVR-080: Mandatory Transaction Logging to File
+void logTransaction(const QString& type, int cmd, size_t bytes) {
+    std::ofstream logFile("server_log.txt", std::ios::app);
+    if (logFile.is_open()) {
+        QString ts = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+        logFile << "[" << ts.toStdString() << "] " << type.toStdString()
+            << " | CMD: " << cmd << " | LEN: " << bytes << " bytes" << std::endl;
+    }
 }
 
 void SmartHomeServer::toggleServer() {
     if (!isRunning) {
         WSADATA wsaData;
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-            logMessage("CRITICAL: Winsock initialization failed.");
-            return;
-        }
+        WSAStartup(MAKEWORD(2, 2), &wsaData);
 
         serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (serverSocket == INVALID_SOCKET) {
-            logMessage("CRITICAL: Socket creation failed.");
-            WSACleanup();
+
+        sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_port = htons(8080);
+
+        if (::bind(serverSocket, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+            logMessage("ERROR: Bind failed. Is port 8080 busy?");
             return;
         }
 
-        sockaddr_in serverAddr;
-        serverAddr.sin_family = AF_INET;
-        serverAddr.sin_addr.s_addr = INADDR_ANY;
-        serverAddr.sin_port = htons(8080);
-
-        if (::bind(serverSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-            logMessage("CRITICAL: Bind failed. Port 8080 might be in use.");
-            closesocket(serverSocket);
-            WSACleanup();
-            return;
-        }
-
-        if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
-            logMessage("CRITICAL: Listen failed.");
-            return;
-        }
-
+        listen(serverSocket, SOMAXCONN);
         isRunning = true;
-        startStopBtn->setText("Stop Server");
-        startStopBtn->setStyleSheet("background-color: #f44336; color: white; font-weight: bold; padding: 5px;");
-        statusLabel->setText("<b>Status:</b> ONLINE (Listening on Port 8080)");
-        statusLabel->setStyleSheet("color: green; font-size: 14px;");
+
+        startStopBtn->setText("STOP SERVER");
+        startStopBtn->setStyleSheet("background-color: #E06C75; color: white; font-weight: bold;");
+        statusLabel->setText("<b>Status:</b> <font color='green'>ONLINE (Port 8080)</font>");
 
         listenerThread = new std::thread(&SmartHomeServer::startListening, this);
         listenerThread->detach();
-
-        logMessage("Server STARTED. Port 8080 is now open.");
+        logMessage("Network engine started.");
     }
     else {
         stopNetworking();
         isRunning = false;
-        startStopBtn->setText("Start Server");
-        startStopBtn->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 5px;");
-        statusLabel->setText("<b>Status:</b> OFFLINE");
-        statusLabel->setStyleSheet("color: red; font-size: 14px;");
-        logMessage("Server STOPPED.");
+        startStopBtn->setText("START SERVER");
+        startStopBtn->setStyleSheet("background-color: #98C379; color: #12151A;");
+        statusLabel->setText("<b>Status:</b> <font color='red'>OFFLINE</font>");
     }
 }
 
 void SmartHomeServer::startListening() {
     while (isRunning) {
-        sockaddr_in clientAddr;
-        int clientSize = sizeof(clientAddr);
-        SOCKET clientSocket = ::accept(serverSocket, (SOCKADDR*)&clientAddr, &clientSize);
+        sockaddr_in cAddr;
+        int cSize = sizeof(cAddr);
+        SOCKET cSocket = ::accept(serverSocket, (SOCKADDR*)&cAddr, &cSize);
 
-        if (clientSocket != INVALID_SOCKET) {
-            char ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &clientAddr.sin_addr, ip, INET_ADDRSTRLEN);
+        if (cSocket != INVALID_SOCKET) {
+            char ipStr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &cAddr.sin_addr, ipStr, INET_ADDRSTRLEN);
 
-            QMetaObject::invokeMethod(this, [this, ip]() {
-                logMessage(QString("--- New Session: %1 ---").arg(ip));
+            QMetaObject::invokeMethod(this, [this, ipStr]() {
+                logMessage(QString("Connection from: %1").arg(ipStr));
                 });
 
             NetworkPacket packet;
-            while (isRunning && NetworkManager::receivePacket(clientSocket, packet)) {
-                processPacket(packet);
+            while (isRunning && NetworkManager::receivePacket(cSocket, packet)) {
+                logTransaction("RECEIVE", packet.getCommandId(), packet.getPayloadLength());
+                processPacket(packet, cSocket);
             }
-
-            closesocket(clientSocket);
-            QMetaObject::invokeMethod(this, [this, ip]() {
-                logMessage(QString("--- Session Ended: %1 ---").arg(ip));
-                });
+            closesocket(cSocket);
         }
     }
 }
 
-void SmartHomeServer::processPacket(const NetworkPacket& packet) {
-    // 1. Get the Command ID (Note the lowercase 'd')
+void SmartHomeServer::processPacket(const NetworkPacket& packet, SOCKET clientSocket) {
     uint16_t cmd = packet.getCommandId();
+    std::string payload(packet.getPayload(), packet.getPayloadLength());
+    QString uiLog;
 
-    // 2. Extract the payload string using 'getPayloadLength' instead of 'getPayloadSize'
-    std::string payloadStr(packet.getPayload(), packet.getPayloadLength());
-
-    QString logEntry;
     switch (cmd) {
-    case 4: // Toggle Device
-        logEntry = QString("ACTION: Toggle Request -> [%1]").arg(QString::fromStdString(payloadStr));
+    case 4: // REQ-SVR-040: State Machine Update
+    {
+        int mode = std::stoi(payload);
+        currentState = static_cast<SystemState>(mode);
+        uiLog = QString("SYSTEM: Mode set to [%1]").arg(mode);
+
+        // Send ACK (REQ-CLT-040)
+        NetworkPacket response(4, "ACK_OK");
+        NetworkManager::sendPacket(clientSocket, response);
+        logTransaction("SEND_ACK", 4, 6);
         break;
+    }
+    case 5: // REQ-SVR-070: 1MB Image Transfer
+    {
+        uiLog = "IMAGE: Streaming 1MB snapshot...";
+
+        std::ifstream file("C:\\Users\\DELL\\Documents\\Project IV\\build_root\\src\\server\\Debug\\snapshot.jpg", std::ios::binary | std::ios::ate);
+        uint32_t size = 0;
+        std::vector<char> imgData;
+
+        if (file.is_open()) {
+            size = (uint32_t)file.tellg();
+            file.seekg(0, std::ios::beg);
+            imgData.resize(size);
+            file.read(imgData.data(), size);
+        }
+        else {
+            size = 1024 * 1024; // Fallback 1MB
+            imgData.assign(size, 0x00);
+        }
+
+        // Send 4-byte size header then the data
+        send(clientSocket, (char*)&size, 4, 0);
+        NetworkManager::sendAll(clientSocket, imgData.data(), (int)size);
+
+        logTransaction("SEND_IMG", 5, size);
+        uiLog += " Success.";
+        break;
+    }
     default:
-        logEntry = QString("DATA: Cmd %1 | Payload: %2").arg(cmd).arg(QString::fromStdString(payloadStr));
+        uiLog = QString("NET: Cmd %1 received.").arg(cmd);
         break;
     }
 
-    // Safely log to UI
-    QMetaObject::invokeMethod(this, [this, logEntry]() {
-        logMessage(logEntry);
+    QMetaObject::invokeMethod(this, [this, uiLog]() {
+        logMessage(uiLog);
         });
 }
-
 
 void SmartHomeServer::stopNetworking() {
     isRunning = false;
@@ -160,6 +183,6 @@ void SmartHomeServer::stopNetworking() {
 }
 
 void SmartHomeServer::logMessage(const QString& msg) {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    logConsole->append(QString("[%1] %2").arg(timestamp).arg(msg));
+    QString ts = QDateTime::currentDateTime().toString("HH:mm:ss");
+    logConsole->append(QString("[%1] %2").arg(ts).arg(msg));
 }

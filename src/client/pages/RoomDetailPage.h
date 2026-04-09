@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSlider>
+#include <QPixmap> // Added for the camera feed
 #include "../components/ClimateWidget.h"
 
 class RoomDetailPage : public QWidget {
@@ -13,18 +14,23 @@ class RoomDetailPage : public QWidget {
 
 public:
     explicit RoomDetailPage(QWidget* parent = nullptr);
-    void loadRoom(const QString& roomName); // The dynamic loader
+    void loadRoom(const QString& roomName);
+
+    // NEW: Needed so SmartHomeClient can send the received JPEG here
+    void updateCameraDisplay(const QPixmap& pix);
 
 signals:
     void backButtonClicked();
+    void imageRequestTriggered();
 
 private:
     void setupUi();
     void updateStatusBar(const QString& temp, const QString& lightStatus);
 
-    // UI Generation Helpers (Requirements #2 & #3)
+    // UI Generation Helpers
     QWidget* createDeviceSwitch(QString name, bool isOn);
     QWidget* createDeviceSlider(QString name, int initialValue, QString unit);
+    void setupCameraView(QVBoxLayout* layout); // Added helper for cleaner code
     void clearLayout(QLayout* layout);
 
     // Header Elements
@@ -34,4 +40,8 @@ private:
 
     // Main Container
     QVBoxLayout* deviceContainer;
+
+    // Security Elements (REQ-SVR-070)
+    QLabel* cameraMonitor;
+    QPushButton* btnRequestImage;
 };

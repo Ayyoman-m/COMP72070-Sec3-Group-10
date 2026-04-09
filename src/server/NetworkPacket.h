@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -15,9 +16,14 @@ private:
 
 public:
     NetworkPacket();
+
+    // Original numeric constructor
     NetworkPacket(uint16_t cmd, uint16_t status);
 
-    // Getters - Names matched exactly to your Tests and Manager
+    // NEW: String payload constructor (Fixes Error C2665)
+    NetworkPacket(uint16_t cmd, const std::string& payloadStr);
+
+    // Getters
     uint8_t getMagicNumber() const { return magicNumber; }
     uint8_t getVersion() const { return version; }
     uint16_t getCommandId() const { return commandId; }

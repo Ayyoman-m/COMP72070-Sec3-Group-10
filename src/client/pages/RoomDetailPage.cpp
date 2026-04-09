@@ -55,14 +55,13 @@ void RoomDetailPage::loadRoom(const QString& roomName) {
     roomTitleLabel->setText(roomName.toUpper());
     clearLayout(deviceContainer);
 
-    // Requirement: Every room gets a light + specialized controls
+    // Common check for security-enabled rooms (REQ-SVR-070)
+    bool hasSecurity = (roomName == "Garage" || roomName == "Backyard");
+
     if (roomName == "Living Room") {
         updateStatusBar("22.5°C", "ON");
         deviceContainer->insertWidget(0, createDeviceSwitch("Main Chandelier", true));
-
-        // --- CLIMATE SYNC ---
         ClimateWidget* cw = new ClimateWidget();
-        // This connection fixes the Temperature Header desync
         connect(cw, &ClimateWidget::targetTempChanged, [this](float newTemp) {
             roomTempLabel->setText("TEMP: " + QString::number(newTemp, 'f', 1) + "°C");
             });
@@ -73,39 +72,59 @@ void RoomDetailPage::loadRoom(const QString& roomName) {
         updateStatusBar("24.0°C", "OFF");
         deviceContainer->insertWidget(0, createDeviceSwitch("Kitchen Fluorescents", false));
         deviceContainer->insertWidget(1, createDeviceSwitch("Smart Oven", false));
-        deviceContainer->insertWidget(2, createDeviceSlider("Ventilation Fan", 20, "%"));
     }
     else if (roomName == "Master Bedroom") {
         updateStatusBar("21.5°C", "OFF");
-        deviceContainer->insertWidget(0, createDeviceSwitch("Bedside Lamp", false));
-        deviceContainer->insertWidget(1, createDeviceSwitch("Overhead Light", false));
-        deviceContainer->insertWidget(2, createDeviceSlider("Mood Dimmer", 10, "%"));
-    }
-    else if (roomName == "Guest Room") {
-        updateStatusBar("20.0°C", "OFF");
-        deviceContainer->insertWidget(0, createDeviceSwitch("Guest Light", false));
-        deviceContainer->insertWidget(1, createDeviceSlider("Reading Lamp", 100, "%"));
-    }
-    else if (roomName == "Bathroom") {
-        updateStatusBar("21.0°C", "OFF");
-        deviceContainer->insertWidget(0, createDeviceSwitch("Vanity Mirror Light", false));
-        deviceContainer->insertWidget(1, createDeviceSwitch("Floor Heating", true));
+        deviceContainer->insertWidget(0, createDeviceSwitch("Overhead Light", false));
+        deviceContainer->insertWidget(1, createDeviceSlider("Mood Dimmer", 10, "%"));
     }
     else if (roomName == "Garage") {
         updateStatusBar("15.0°C", "OFF");
-        deviceContainer->insertWidget(0, createDeviceSwitch("Garage High-Bay Lights", false));
-        deviceContainer->insertWidget(1, createDeviceSwitch("Main Roller Door", false));
+        deviceContainer->insertWidget(0, createDeviceSwitch("Main Roller Door", false));
+        setupCameraView(deviceContainer); // REQ-SVR-070 integration
     }
     else if (roomName == "Backyard") {
         updateStatusBar("18.0°C", "DUSK");
-        deviceContainer->insertWidget(0, createDeviceSwitch("Perimeter Flood Lights", false));
-        deviceContainer->insertWidget(1, createDeviceSlider("Sprinkler Pressure", 0, " PSI"));
+        deviceContainer->insertWidget(0, createDeviceSwitch("Flood Lights", false));
+        setupCameraView(deviceContainer); // REQ-SVR-070 integration
+    }
+    else {
+        // Default catch-all for other rooms
+        updateStatusBar("20.0°C", "OFF");
+        deviceContainer->insertWidget(0, createDeviceSwitch("General Lighting", false));
     }
 
     deviceContainer->addStretch();
 }
 
-// Fixed: Toggling the switch now updates the "LIGHTS: ON/OFF" header label
+void RoomDetailPage::setupCameraView(QVBoxLayout* layout) {
+    QLabel* camTitle = new QLabel("LIVE SECURITY FEED (1MB SNAPSHOT)");
+    camTitle->setStyleSheet("color: #56B6C2; font-weight: bold; margin-top: 20px;");
+    layout->addWidget(camTitle);
+
+    cameraMonitor = new QLabel("NO SIGNAL - CLICK TO REQUEST");
+    cameraMonitor->setFixedSize(640, 360);
+    cameraMonitor->setAlignment(Qt::AlignCenter);
+    cameraMonitor->setStyleSheet("background: #000000; border: 2px solid #2C313C; color: #5C6370; font-family: monospace;");
+    layout->addWidget(cameraMonitor);
+
+    btnRequestImage = new QPushButton("CAPTURE HIGH-RES JPEG");
+    btnRequestImage->setStyleSheet(
+        "QPushButton { background: #61AFEF; color: #12151A; font-weight: bold; padding: 12px; border-radius: 4px; }"
+        "QPushButton:hover { background: #52a0e0; }"
+    );
+    connect(btnRequestImage, &QPushButton::clicked, this, &RoomDetailPage::imageRequestTriggered);
+    layout->addWidget(btnRequestImage);
+}
+
+// REQ-SVR-070: Updates the "Monitor" with the 1MB received image
+void RoomDetailPage::updateCameraDisplay(const QPixmap& pix) {
+    if (cameraMonitor) {
+        cameraMonitor->setPixmap(pix.scaled(cameraMonitor->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        cameraMonitor->setText(""); // Remove the "No Signal" text
+    }
+}
+
 QWidget* RoomDetailPage::createDeviceSwitch(QString name, bool isOn) {
     QFrame* card = new QFrame();
     card->setObjectName("DeviceCard");
@@ -120,20 +139,12 @@ QWidget* RoomDetailPage::createDeviceSwitch(QString name, bool isOn) {
     btn->setObjectName(isOn ? "ToggleOn" : "ToggleOff");
     btn->setFixedSize(80, 40);
 
-    // Lambda logic to toggle status AND update the parent header
     connect(btn, &QPushButton::clicked, [this, btn]() {
         bool currentlyOn = (btn->text() == "ON");
-        if (currentlyOn) {
-            btn->setText("OFF");
-            btn->setObjectName("ToggleOff");
-            roomLightStatusLabel->setText("LIGHTS: OFF"); // Fixes the desync
-        }
-        else {
-            btn->setText("ON");
-            btn->setObjectName("ToggleOn");
-            roomLightStatusLabel->setText("LIGHTS: ON");  // Fixes the desync
-        }
-        // Style Refresh
+        btn->setText(currentlyOn ? "OFF" : "ON");
+        btn->setObjectName(currentlyOn ? "ToggleOff" : "ToggleOn");
+        roomLightStatusLabel->setText("LIGHTS: " + btn->text());
+
         btn->style()->unpolish(btn);
         btn->style()->polish(btn);
         });
@@ -168,7 +179,6 @@ QWidget* RoomDetailPage::createDeviceSlider(QString name, int initialValue, QStr
 
     layout->addLayout(top);
     layout->addWidget(slider);
-
     return card;
 }
 

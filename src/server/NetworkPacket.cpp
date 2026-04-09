@@ -6,9 +6,16 @@ NetworkPacket::NetworkPacket()
     checksum = calculateChecksum();
 }
 
+// Numeric Constructor
 NetworkPacket::NetworkPacket(uint16_t cmd, uint16_t status)
     : magicNumber(0x7E), version(1), commandId(cmd), statusCode(status), payloadLength(0), checksum(0) {
     checksum = calculateChecksum();
+}
+
+// String Constructor - FIXES C2665
+NetworkPacket::NetworkPacket(uint16_t cmd, const std::string& payloadStr)
+    : magicNumber(0x7E), version(1), commandId(cmd), statusCode(0) {
+    setPayload(payloadStr.c_str(), static_cast<uint32_t>(payloadStr.length()));
 }
 
 void NetworkPacket::setCommandId(uint16_t cmd) {
@@ -34,8 +41,11 @@ void NetworkPacket::setPayload(const char* data, uint32_t length) {
 }
 
 uint16_t NetworkPacket::calculateChecksum() const {
+    // Using uint32_t for internal math to prevent overflow before the modulo
     uint32_t sum = magicNumber + version + commandId + statusCode + payloadLength;
-    for (char c : payload) sum += static_cast<uint8_t>(c);
+    for (char c : payload) {
+        sum += static_cast<uint8_t>(c);
+    }
     return static_cast<uint16_t>(sum % 65536);
 }
 
@@ -44,7 +54,7 @@ bool NetworkPacket::isValid() const {
 }
 
 char* NetworkPacket::serialize(uint32_t& outSize) const {
-    outSize = 10 + payloadLength + 2;
+    outSize = 10 + payloadLength + 2; // Header(10) + Body + Checksum(2)
     char* buffer = new char[outSize];
 
     buffer[0] = magicNumber;
@@ -52,7 +62,10 @@ char* NetworkPacket::serialize(uint32_t& outSize) const {
     std::memcpy(buffer + 2, &commandId, 2);
     std::memcpy(buffer + 4, &statusCode, 2);
     std::memcpy(buffer + 6, &payloadLength, 4);
-    if (payloadLength > 0) std::memcpy(buffer + 10, payload.data(), payloadLength);
+
+    if (payloadLength > 0) {
+        std::memcpy(buffer + 10, payload.data(), payloadLength);
+    }
 
     uint16_t cs = calculateChecksum();
     std::memcpy(buffer + 10 + payloadLength, &cs, 2);
@@ -69,6 +82,7 @@ bool NetworkPacket::deserialize(const char* data, uint32_t size) {
     std::memcpy(&statusCode, data + 4, 2);
     std::memcpy(&payloadLength, data + 6, 4);
 
+    // Bounds check to prevent buffer overflow
     if (size < (10 + payloadLength + 2)) return false;
 
     if (payloadLength > 0) {

@@ -5,23 +5,34 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QStyle>
+#include <QSettings>
+#include <QDebug>
+#include <QTimer> 
+#include <QCoreApplication> 
+#include "NetworkPacket.h"   
+#include "NetworkManager.h"
 
-// Crucial: These includes must be here so the compiler knows the Signal/Slot signatures
+// Page Includes
 #include "pages/HomePage.h"
 #include "pages/SignUpPage.h"
 #include "pages/RoomDetailPage.h"
+#include "pages/MapPage.h"
+#include "pages/ProfilePage.h"
+#include "pages/SettingsPage.h"
 
 SmartHomeClient::SmartHomeClient(QWidget* parent)
     : QMainWindow(parent), isSidebarCollapsed(false), clientSocket(INVALID_SOCKET)
 {
-    // Requirement #7: Initialize local DB
     localUserDb.push_back({ "admin", "password", "admin@smarthome.pro" });
 
-    // Networking Init
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     setupUi();
+
+    QSettings settings("SmartHomeProject", "ClientApp");
+    userEdit->setText(settings.value("lastUser", "").toString());
+
     this->setStyleSheet(StyleManager::getMainWindowStyle());
 }
 
@@ -68,7 +79,6 @@ void SmartHomeClient::setupUi() {
     lLayout->addWidget(loginStatusLabel);
     lLayout->addStretch();
 
-    // Fix for E0304: Use QObject::connect to avoid conflict with winsock connect()
     QObject::connect(btnLogin, &QPushButton::clicked, this, &SmartHomeClient::attemptLogin);
     QObject::connect(btnGoToSignUp, &QPushButton::clicked, this, &SmartHomeClient::showSignUpPage);
 
@@ -103,16 +113,21 @@ void SmartHomeClient::setupSidebar() {
     QPushButton* btnUser = new QPushButton(" 👤  PROFILE");
     QPushButton* btnSet = new QPushButton(" ⚙️  SETTINGS");
 
+    QPushButton* btnLogout = new QPushButton(" ⏻  LOGOUT");
+    btnLogout->setStyleSheet("color: #E06C75; font-weight: bold;");
+
     layout->addWidget(btnHome);
     layout->addWidget(btnMap);
     layout->addWidget(btnUser);
     layout->addStretch();
     layout->addWidget(btnSet);
+    layout->addWidget(btnLogout);
 
     QObject::connect(btnHome, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(homePage); });
     QObject::connect(btnMap, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(mapPage); });
     QObject::connect(btnUser, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(profilePage); });
     QObject::connect(btnSet, &QPushButton::clicked, [this]() { pageStack->setCurrentWidget(settingsPage); });
+    QObject::connect(btnLogout, &QPushButton::clicked, this, &SmartHomeClient::logout);
 }
 
 void SmartHomeClient::setupPages() {
@@ -133,10 +148,16 @@ void SmartHomeClient::setupPages() {
 
     centralStack->addWidget(signUpPage);
 
-    // Fix for E0304: Explicit QObject scope for all connections
+    // Core Navigation
     QObject::connect(homePage, &HomePage::roomClicked, this, &SmartHomeClient::onRoomSelected);
     QObject::connect(mapPage, &MapPage::roomRequested, this, &SmartHomeClient::onRoomSelected);
     QObject::connect(mapPage, &MapPage::deviceRequested, this, &SmartHomeClient::onDeviceSelected);
+
+    // REQ-SVR-040: State Machine
+    QObject::connect(homePage, &HomePage::modeChangeRequested, this, &SmartHomeClient::handleModeChange);
+
+    // REQ-SVR-070: Image Request
+    QObject::connect(roomDetailPage, &RoomDetailPage::imageRequestTriggered, this, &SmartHomeClient::requestSecurityImage);
 
     QObject::connect(roomDetailPage, &RoomDetailPage::backButtonClicked, [this]() {
         pageStack->setCurrentWidget(homePage);
@@ -146,6 +167,85 @@ void SmartHomeClient::setupPages() {
     QObject::connect(signUpPage, &SignUpPage::backToLoginRequested, [this]() {
         centralStack->setCurrentWidget(loginWidget);
         });
+}
+
+void SmartHomeClient::showToast(const QString& message, bool isError) {
+    QLabel* toast = new QLabel(message, this);
+    toast->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
+    toast->setAttribute(Qt::WA_TranslucentBackground);
+    toast->setAlignment(Qt::AlignCenter);
+
+    QString color = isError ? "#E06C75" : "#61AFEF";
+    toast->setStyleSheet(QString(
+        "background-color: rgba(30, 34, 42, 230); color: %1; "
+        "border: 1px solid %1; border-radius: 10px; padding: 12px 20px; font-weight: bold;"
+    ).arg(color));
+
+    toast->adjustSize();
+    int x = (this->width() - toast->width()) / 2;
+    int y = this->height() - 100;
+    toast->move(this->pos().x() + x, this->pos().y() + y);
+    toast->show();
+
+    QTimer::singleShot(2500, toast, &QLabel::deleteLater);
+}
+
+// REQ-SVR-070: High-Res Image Transfer (Fixed for Reliable Reception)
+void SmartHomeClient::requestSecurityImage() {
+    if (clientSocket == INVALID_SOCKET) {
+        showToast("Error: No Connection", true);
+        return;
+    }
+
+    showToast("Requesting Security Snapshot...");
+
+    // Send Command 5 (Image Request)
+    NetworkPacket req(5, "GET_IMG");
+    if (!NetworkManager::sendPacket(clientSocket, req)) {
+        showToast("Error: Command Failed", true);
+        return;
+    }
+
+    // 1. Receive the 4-byte size header RELIABLY
+    uint32_t imageSize = 0;
+    if (!NetworkManager::recvAll(clientSocket, reinterpret_cast<char*>(&imageSize), 4)) {
+        showToast("Error: Failed to receive image size", true);
+        return;
+    }
+
+    // Safety check for size
+    if (imageSize == 0 || imageSize > 5000000) {
+        showToast("Error: Invalid Image Size", true);
+        return;
+    }
+
+    // 2. Prepare buffer for exact file size
+    std::vector<char> buffer(imageSize);
+    int receivedSoFar = 0;
+
+    // Use loop to gather the stream while keeping UI responsive
+    while (receivedSoFar < (int)imageSize) {
+        // We receive in chunks to ensure QCoreApplication::processEvents() runs
+        int remaining = imageSize - receivedSoFar;
+        int chunkSize = (remaining > 4096) ? 4096 : remaining;
+
+        int n = recv(clientSocket, buffer.data() + receivedSoFar, chunkSize, 0);
+        if (n <= 0) break;
+        receivedSoFar += n;
+
+        QCoreApplication::processEvents();
+    }
+
+    // 3. Render Image
+    QPixmap pix;
+    // Auto-detect format without hardcoding "JPG" hint
+    if (receivedSoFar == (int)imageSize && pix.loadFromData(reinterpret_cast<uchar*>(buffer.data()), imageSize)) {
+        roomDetailPage->updateCameraDisplay(pix);
+        showToast(QString("Success: %1 KB Snapshot Received").arg(imageSize / 1024));
+    }
+    else {
+        showToast("Error: Image Data Corrupt or Incomplete", true);
+    }
 }
 
 bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
@@ -158,7 +258,6 @@ bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
     serverAddr.sin_port = htons(port);
     serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
 
-    // This is the Winsock connect, NOT the Qt connect
     if (::connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         closesocket(clientSocket);
         clientSocket = INVALID_SOCKET;
@@ -184,17 +283,42 @@ void SmartHomeClient::attemptLogin() {
         }
     }
 
-    if (found) centralStack->setCurrentWidget(dashboardWidget);
+    if (found) {
+        QSettings settings("SmartHomeProject", "ClientApp");
+        settings.setValue("lastUser", inputUser);
+        centralStack->setCurrentWidget(dashboardWidget);
+        showToast("Welcome back, " + inputUser);
+    }
     else {
         loginStatusLabel->setText("Access Denied: Invalid Credentials");
         loginStatusLabel->setStyleSheet("color: #E06C75;");
     }
 }
 
+void SmartHomeClient::handleModeChange(int modeIndex) {
+    if (clientSocket != INVALID_SOCKET) {
+        NetworkPacket p(4, std::to_string(modeIndex));
+        NetworkManager::sendPacket(clientSocket, p);
+    }
+
+    QStringList modes = { "LOCKED", "HOME", "AWAY", "MAINTENANCE" };
+    showToast("Mode Request: " + modes[modeIndex]);
+}
+
+void SmartHomeClient::logout() {
+    if (clientSocket != INVALID_SOCKET) {
+        closesocket(clientSocket);
+        clientSocket = INVALID_SOCKET;
+    }
+    passEdit->clear();
+    centralStack->setCurrentWidget(loginWidget);
+    showToast("Logged Out Safely");
+}
+
 void SmartHomeClient::handleNewRegistration(QString user, QString pass, QString email) {
     localUserDb.push_back({ user, pass, email });
     centralStack->setCurrentWidget(loginWidget);
-    loginStatusLabel->setText("Registration Successful! Please Login.");
+    loginStatusLabel->setText("Registration Successful!");
     loginStatusLabel->setStyleSheet("color: #98C379;");
 }
 

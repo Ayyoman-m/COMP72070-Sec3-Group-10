@@ -669,6 +669,89 @@ bool testInvalidCommand() {
             return false;
         }
     }
+    // this test checks valid transition from MAINTENANCE to HOME
+    bool testMaintenanceToHome() {
+        StateMachine sm;
+        sm.setState(ServerState::HOME);
+        sm.setState(ServerState::MAINTENANCE);
+
+        bool result = sm.setState(ServerState::HOME);
+
+        if (result && sm.getState() == ServerState::HOME) {
+            std::cout << "PASS: MAINTENANCE -> HOME\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: MAINTENANCE -> HOME should be valid\n";
+            return false;
+        }
+    }
+
+    // this test checks invalid transition from AWAY to MAINTENANCE
+    bool testAwayToMaintenanceInvalid() {
+        StateMachine sm;
+        sm.setState(ServerState::HOME);
+        sm.setState(ServerState::AWAY);
+
+        bool result = sm.setState(ServerState::MAINTENANCE);
+
+        if (!result && sm.getState() == ServerState::AWAY) {
+            std::cout << "PASS: AWAY -> MAINTENANCE rejected\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: AWAY -> MAINTENANCE should be invalid\n";
+            return false;
+        }
+    }
+
+    // this test checks invalid TURN_ON_DEVICE through request handler
+    bool testTurnOnInvalidDeviceThroughHandler() {
+        StateMachine sm;
+        DeviceManager dm;
+        LogManager lm;
+        ClientSession session;
+        RequestHandler handler(sm, dm, lm);
+
+        session.setAuthenticated(true);
+        sm.setState(ServerState::HOME);
+
+        Packet packet{ CommandID::TURN_ON_DEVICE, "TV" };
+        std::string result = handler.handleRequest(packet, session);
+
+        if (result == "FAILURE") {
+            std::cout << "PASS: Invalid TURN_ON_DEVICE rejected\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: Invalid TURN_ON_DEVICE should return FAILURE\n";
+            return false;
+        }
+    }
+
+    // this test checks invalid TURN_OFF_DEVICE through request handler
+    bool testTurnOffInvalidDeviceThroughHandler() {
+        StateMachine sm;
+        DeviceManager dm;
+        LogManager lm;
+        ClientSession session;
+        RequestHandler handler(sm, dm, lm);
+
+        session.setAuthenticated(true);
+        sm.setState(ServerState::HOME);
+
+        Packet packet{ CommandID::TURN_OFF_DEVICE, "TV" };
+        std::string result = handler.handleRequest(packet, session);
+
+        if (result == "FAILURE") {
+            std::cout << "PASS: Invalid TURN_OFF_DEVICE rejected\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: Invalid TURN_OFF_DEVICE should return FAILURE\n";
+            return false;
+        }
+    }
 
 // MAIN
 
@@ -705,6 +788,10 @@ int main(int argc, char** argv)
         {"set_mode_away_with_auth_works", testSetModeAwayWithAuthWorks},
         {"turn_off_device_through_handler", testTurnOffDeviceThroughHandler},
         {"get_invalid_device_status_through_handler", testGetInvalidDeviceStatusThroughHandler},
+        {"maintenance_to_home", testMaintenanceToHome},
+        {"away_to_maintenance_invalid", testAwayToMaintenanceInvalid},
+        {"turn_on_invalid_device_through_handler", testTurnOnInvalidDeviceThroughHandler},
+        {"turn_off_invalid_device_through_handler", testTurnOffInvalidDeviceThroughHandler},
     };
 
     return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

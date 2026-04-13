@@ -544,10 +544,136 @@ bool testInvalidCommand() {
         return false;
     }
 }
+    // this test checks valid transition from HOME to LOCKED
+    bool testHomeToLocked() {
+        StateMachine sm;
+        sm.setState(ServerState::HOME);
+
+        bool result = sm.setState(ServerState::LOCKED);
+
+        if (result && sm.getState() == ServerState::LOCKED) {
+            std::cout << "PASS: HOME -> LOCKED\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: HOME -> LOCKED should be valid\n";
+            return false;
+        }
+    }
+
+    // this test checks valid transition from AWAY to HOME
+    bool testAwayToHome() {
+        StateMachine sm;
+        sm.setState(ServerState::HOME);
+        sm.setState(ServerState::AWAY);
+
+        bool result = sm.setState(ServerState::HOME);
+
+        if (result && sm.getState() == ServerState::HOME) {
+            std::cout << "PASS: AWAY -> HOME\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: AWAY -> HOME should be valid\n";
+            return false;
+        }
+    }
+
+    // this test checks valid transition from MAINTENANCE to LOCKED
+    bool testMaintenanceToLocked() {
+        StateMachine sm;
+        sm.setState(ServerState::HOME);
+        sm.setState(ServerState::MAINTENANCE);
+
+        bool result = sm.setState(ServerState::LOCKED);
+
+        if (result && sm.getState() == ServerState::LOCKED) {
+            std::cout << "PASS: MAINTENANCE -> LOCKED\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: MAINTENANCE -> LOCKED should be valid\n";
+            return false;
+        }
+    }
+
+    // this test checks SET_MODE AWAY works after login
+    bool testSetModeAwayWithAuthWorks() {
+        StateMachine sm;
+        DeviceManager dm;
+        LogManager lm;
+        ClientSession session;
+        RequestHandler handler(sm, dm, lm);
+
+        session.setAuthenticated(true);
+        sm.setState(ServerState::HOME);
+
+        Packet packet{ CommandID::SET_MODE, "AWAY" };
+        std::string result = handler.handleRequest(packet, session);
+
+        if (result == "SUCCESS" && sm.getState() == ServerState::AWAY) {
+            std::cout << "PASS: SET_MODE AWAY works after login\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: SET_MODE AWAY should work after login\n";
+            return false;
+        }
+    }
+
+    // this test checks turning off device through request handler
+    bool testTurnOffDeviceThroughHandler() {
+        StateMachine sm;
+        DeviceManager dm;
+        LogManager lm;
+        ClientSession session;
+        RequestHandler handler(sm, dm, lm);
+
+        session.setAuthenticated(true);
+        sm.setState(ServerState::HOME);
+        dm.turnOn("FAN");
+
+        Packet packet{ CommandID::TURN_OFF_DEVICE, "FAN" };
+        std::string result = handler.handleRequest(packet, session);
+
+        if (result == "SUCCESS" && dm.getStatus("FAN") == "OFF") {
+            std::cout << "PASS: RequestHandler turns FAN OFF\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: RequestHandler should turn FAN OFF\n";
+            return false;
+        }
+    }
+
+    // this test checks invalid device status through request handler
+    bool testGetInvalidDeviceStatusThroughHandler() {
+        StateMachine sm;
+        DeviceManager dm;
+        LogManager lm;
+        ClientSession session;
+        RequestHandler handler(sm, dm, lm);
+
+        session.setAuthenticated(true);
+        sm.setState(ServerState::HOME);
+
+        Packet packet{ CommandID::GET_DEVICE_STATUS, "TV" };
+        std::string result = handler.handleRequest(packet, session);
+
+        if (result == "DEVICE NOT FOUND") {
+            std::cout << "PASS: RequestHandler handles invalid device status\n";
+            return true;
+        }
+        else {
+            std::cout << "FAIL: RequestHandler should return DEVICE NOT FOUND\n";
+            return false;
+        }
+    }
 
 // MAIN
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     const TestCase tests[] = {
         {"initial_state", testInitialState},
         {"locked_to_home", testLockedToHome},
@@ -573,6 +699,12 @@ int main(int argc, char** argv) {
         {"login_invalid_format", testLoginInvalidFormat},
         {"set_mode_unknown_mode", testSetModeUnknownMode},
         {"invalid_command", testInvalidCommand},
+        {"home_to_locked", testHomeToLocked},
+        {"away_to_home", testAwayToHome},
+        {"maintenance_to_locked", testMaintenanceToLocked},
+        {"set_mode_away_with_auth_works", testSetModeAwayWithAuthWorks},
+        {"turn_off_device_through_handler", testTurnOffDeviceThroughHandler},
+        {"get_invalid_device_status_through_handler", testGetInvalidDeviceStatusThroughHandler},
     };
 
     return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

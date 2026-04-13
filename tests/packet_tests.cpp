@@ -203,6 +203,45 @@ namespace
         delete[] buffer;
     }
 
+    void test_string_payload_constructor_sets_payload()
+    {
+        // Verifies the convenience constructor sets the payload and keeps status code defaulted to 0.
+        NetworkPacket packet(7, std::string("HELLO"));
+        assertPacketState(packet, 7, 0, "HELLO", 5);
+    }
+
+    void test_set_payload_nullptr_with_nonzero_length_clears()
+    {
+        // Defensive behavior: if data is nullptr, we treat it as an empty payload regardless of length.
+        NetworkPacket packet(12, 204);
+        packet.setPayload("ON", 2);
+        assertPacketState(packet, 12, 204, "ON", 2);
+
+        packet.setPayload(nullptr, 5);
+        assertPacketState(packet, 12, 204, nullptr, 0);
+    }
+
+    void test_deserialize_rejects_oversized_payload_length_header()
+    {
+        // Security check: reject packets that claim a payload length larger than the provided buffer.
+        NetworkPacket original(44, 201);
+        original.setPayload("SAFE", 4);
+
+        NetworkPacket packetUnderTest = original;
+
+        unsigned int validSize = 0;
+        char* validBuffer = original.serialize(validSize);
+
+        // Overwrite the payload length field with an absurd value. The buffer size stays small.
+        uint32_t hugeLength = 0xFFFFFFFF;
+        std::memcpy(validBuffer + 6, &hugeLength, 4);
+
+        assert(!packetUnderTest.deserialize(validBuffer, validSize));
+        assertPacketState(packetUnderTest, 44, 201, "SAFE", 4);
+
+        delete[] validBuffer;
+    }
+
     void test_deserialize_rejects_invalid_inputs_without_mutating_packet()
     {
         NetworkPacket original(44, 201);
@@ -277,6 +316,9 @@ int main(int argc, char** argv)
         {"serialize_and_deserialize_round_trip", test_serialize_and_deserialize_round_trip},
         {"deserialize_rejects_invalid_inputs", test_deserialize_rejects_invalid_inputs},
         {"empty_payload_paths", test_empty_payload_paths},
+        {"string_payload_constructor_sets_payload", test_string_payload_constructor_sets_payload},
+        {"set_payload_nullptr_with_nonzero_length_clears", test_set_payload_nullptr_with_nonzero_length_clears},
+        {"deserialize_rejects_oversized_payload_length_header", test_deserialize_rejects_oversized_payload_length_header},
         {"deserialize_rejects_invalid_inputs_without_mutating_packet", test_deserialize_rejects_invalid_inputs_without_mutating_packet},
     };
 

@@ -36,6 +36,7 @@ struct SmartHomeClientTestAccessor
 
     static QLabel* roomTitleLabel(RoomDetailPage& page) { return page.roomTitleLabel; }
     static QPushButton* requestImageButton(RoomDetailPage& page) { return page.btnRequestImage; }
+    static QLabel* cameraMonitor(RoomDetailPage& page) { return page.cameraMonitor; }
 };
 
 namespace
@@ -168,6 +169,18 @@ namespace
         }
 
         return true;
+    }
+
+    bool labelHasPixmap(const QLabel* label)
+    {
+        if (!label) return false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        const QPixmap pix = label->pixmap();
+        return !pix.isNull();
+#else
+        const QPixmap* pix = label->pixmap();
+        return pix && !pix->isNull();
+#endif
     }
 }
 
@@ -525,6 +538,203 @@ bool testRequestSecurityImageWithoutConnectionIsHandled()
         "Security image request without a connection should be handled safely");
 }
 
+// this test checks requestSecurityImage sends a request and updates the camera monitor on a valid image response
+bool testRequestSecurityImageValidImageUpdatesMonitor()
+{
+    LoopbackServer server;
+    SmartHomeClient client;
+
+    const bool connected = connectSocketToServer(SmartHomeClientTestAccessor::clientSocket(client), server.port());
+    if (!connected)
+    {
+        return expect(false, "", "Client should connect to the loopback server before requesting an image");
+    }
+
+    // Ensure the Garage page is loaded, which creates the camera monitor label.
+    const bool navigated = QMetaObject::invokeMethod(&client, "onRoomSelected", Q_ARG(QString, QString("Garage")));
+    if (!navigated)
+    {
+        return expect(false, "", "Client should navigate to Garage before requesting an image");
+    }
+
+    QLabel* monitor = SmartHomeClientTestAccessor::cameraMonitor(*SmartHomeClientTestAccessor::roomDetailPage(client));
+    if (!monitor)
+    {
+        return expect(false, "", "Garage page should have a camera monitor label");
+    }
+
+    // Minimal 1x1 PNG. QPixmap auto-detects the image format from bytes.
+    static const unsigned char kTinyPng[] = {
+        0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,
+        0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52,
+        0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,
+        0x08,0x06,0x00,0x00,0x00,0x1F,0x15,0xC4,0x89,
+        0x00,0x00,0x00,0x0A,0x49,0x44,0x41,0x54,
+        0x78,0x9C,0x63,0x00,0x01,0x00,0x00,0x05,0x00,0x01,0x0D,0x0A,0x2D,0xB4,
+        0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44,0xAE,0x42,0x60,0x82
+    };
+
+    std::thread responder([&]() {
+        SOCKET s = server.socketHandle();
+        NetworkPacket request;
+        const bool received = NetworkManager::receivePacket(s, request);
+        assert(received);
+        assert(request.getCommandId() == 5);
+
+        const uint32_t imageSize = static_cast<uint32_t>(sizeof(kTinyPng));
+        const bool sentSize = NetworkManager::sendAll(s, reinterpret_cast<const char*>(&imageSize), 4);
+        assert(sentSize);
+        const bool sentData = NetworkManager::sendAll(s, reinterpret_cast<const char*>(kTinyPng), static_cast<int>(imageSize));
+        assert(sentData);
+        });
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "requestSecurityImage");
+    responder.join();
+
+    return expect(
+        invoked &&
+        monitor->text().isEmpty() &&
+        labelHasPixmap(monitor),
+        "Valid security image updates the camera monitor",
+        "Valid security image should update the camera monitor");
+}
+
+// this test checks requestSecurityImage rejects a zero-size header without updating the monitor
+bool testRequestSecurityImageZeroSizeDoesNotUpdateMonitor()
+{
+    LoopbackServer server;
+    SmartHomeClient client;
+
+    const bool connected = connectSocketToServer(SmartHomeClientTestAccessor::clientSocket(client), server.port());
+    if (!connected)
+    {
+        return expect(false, "", "Client should connect to the loopback server before requesting an image");
+    }
+
+    QMetaObject::invokeMethod(&client, "onRoomSelected", Q_ARG(QString, QString("Garage")));
+    QLabel* monitor = SmartHomeClientTestAccessor::cameraMonitor(*SmartHomeClientTestAccessor::roomDetailPage(client));
+    if (!monitor)
+    {
+        return expect(false, "", "Garage page should have a camera monitor label");
+    }
+
+    const QString initialText = monitor->text();
+
+    std::thread responder([&]() {
+        SOCKET s = server.socketHandle();
+        NetworkPacket request;
+        const bool received = NetworkManager::receivePacket(s, request);
+        assert(received);
+        assert(request.getCommandId() == 5);
+
+        const uint32_t imageSize = 0;
+        const bool sentSize = NetworkManager::sendAll(s, reinterpret_cast<const char*>(&imageSize), 4);
+        assert(sentSize);
+        });
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "requestSecurityImage");
+    responder.join();
+
+    return expect(
+        invoked &&
+        monitor->text() == initialText &&
+        !labelHasPixmap(monitor),
+        "Zero-size image response is rejected without updating monitor",
+        "Zero-size image response should be rejected without updating monitor");
+}
+
+// this test checks requestSecurityImage rejects oversized headers without updating the monitor
+bool testRequestSecurityImageOversizedDoesNotUpdateMonitor()
+{
+    LoopbackServer server;
+    SmartHomeClient client;
+
+    const bool connected = connectSocketToServer(SmartHomeClientTestAccessor::clientSocket(client), server.port());
+    if (!connected)
+    {
+        return expect(false, "", "Client should connect to the loopback server before requesting an image");
+    }
+
+    QMetaObject::invokeMethod(&client, "onRoomSelected", Q_ARG(QString, QString("Garage")));
+    QLabel* monitor = SmartHomeClientTestAccessor::cameraMonitor(*SmartHomeClientTestAccessor::roomDetailPage(client));
+    if (!monitor)
+    {
+        return expect(false, "", "Garage page should have a camera monitor label");
+    }
+
+    const QString initialText = monitor->text();
+
+    std::thread responder([&]() {
+        SOCKET s = server.socketHandle();
+        NetworkPacket request;
+        const bool received = NetworkManager::receivePacket(s, request);
+        assert(received);
+        assert(request.getCommandId() == 5);
+
+        const uint32_t imageSize = 6000000; // > 5,000,000 safety limit in SmartHomeClient
+        const bool sentSize = NetworkManager::sendAll(s, reinterpret_cast<const char*>(&imageSize), 4);
+        assert(sentSize);
+        });
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "requestSecurityImage");
+    responder.join();
+
+    return expect(
+        invoked &&
+        monitor->text() == initialText &&
+        !labelHasPixmap(monitor),
+        "Oversized image response is rejected without updating monitor",
+        "Oversized image response should be rejected without updating monitor");
+}
+
+// this test checks requestSecurityImage does not update the monitor on corrupt image payloads
+bool testRequestSecurityImageCorruptPayloadDoesNotUpdateMonitor()
+{
+    LoopbackServer server;
+    SmartHomeClient client;
+
+    const bool connected = connectSocketToServer(SmartHomeClientTestAccessor::clientSocket(client), server.port());
+    if (!connected)
+    {
+        return expect(false, "", "Client should connect to the loopback server before requesting an image");
+    }
+
+    QMetaObject::invokeMethod(&client, "onRoomSelected", Q_ARG(QString, QString("Garage")));
+    QLabel* monitor = SmartHomeClientTestAccessor::cameraMonitor(*SmartHomeClientTestAccessor::roomDetailPage(client));
+    if (!monitor)
+    {
+        return expect(false, "", "Garage page should have a camera monitor label");
+    }
+
+    const QString initialText = monitor->text();
+
+    std::thread responder([&]() {
+        SOCKET s = server.socketHandle();
+        NetworkPacket request;
+        const bool received = NetworkManager::receivePacket(s, request);
+        assert(received);
+        assert(request.getCommandId() == 5);
+
+        const uint32_t imageSize = 128;
+        const bool sentSize = NetworkManager::sendAll(s, reinterpret_cast<const char*>(&imageSize), 4);
+        assert(sentSize);
+
+        std::vector<char> garbage(imageSize, 0);
+        const bool sentData = NetworkManager::sendAll(s, garbage.data(), static_cast<int>(garbage.size()));
+        assert(sentData);
+        });
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "requestSecurityImage");
+    responder.join();
+
+    return expect(
+        invoked &&
+        monitor->text() == initialText &&
+        !labelHasPixmap(monitor),
+        "Corrupt image payload does not update the camera monitor",
+        "Corrupt image payload should not update the camera monitor");
+}
+
 
 int main(int argc, char** argv)
 {
@@ -548,6 +758,10 @@ int main(int argc, char** argv)
         {"living_room_device_selection_routes_correctly", testLivingRoomDeviceSelectionRoutesCorrectly},
         {"mode_change_without_connection_still_invokes_safely", testModeChangeWithoutConnectionStillInvokesSafely},
         {"request_security_image_without_connection_is_handled", testRequestSecurityImageWithoutConnectionIsHandled},
+        {"request_security_image_valid_image_updates_monitor", testRequestSecurityImageValidImageUpdatesMonitor},
+        {"request_security_image_zero_size_does_not_update_monitor", testRequestSecurityImageZeroSizeDoesNotUpdateMonitor},
+        {"request_security_image_oversized_does_not_update_monitor", testRequestSecurityImageOversizedDoesNotUpdateMonitor},
+        {"request_security_image_corrupt_payload_does_not_update_monitor", testRequestSecurityImageCorruptPayloadDoesNotUpdateMonitor},
     };
 
     return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

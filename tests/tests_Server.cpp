@@ -443,6 +443,108 @@ int runSelectedTests(int argc, char** argv, const TestCase* tests, int testCount
     return 1;
 }
 
+// this test checks valid transition from HOME to MAINTENANCE
+bool testHomeToMaintenance() {
+    StateMachine sm;
+    sm.setState(ServerState::HOME);
+
+    bool result = sm.setState(ServerState::MAINTENANCE);
+
+    if (result && sm.getState() == ServerState::MAINTENANCE) {
+        std::cout << "PASS: HOME -> MAINTENANCE\n";
+        return true;
+    }
+    else {
+        std::cout << "FAIL: HOME -> MAINTENANCE should be valid\n";
+        return false;
+    }
+}
+
+// this test checks valid transition from AWAY to LOCKED
+bool testAwayToLocked() {
+    StateMachine sm;
+    sm.setState(ServerState::HOME);
+    sm.setState(ServerState::AWAY);
+
+    bool result = sm.setState(ServerState::LOCKED);
+
+    if (result && sm.getState() == ServerState::LOCKED) {
+        std::cout << "PASS: AWAY -> LOCKED\n";
+        return true;
+    }
+    else {
+        std::cout << "FAIL: AWAY -> LOCKED should be valid\n";
+        return false;
+    }
+}
+
+// this test checks LOGIN packet with invalid format
+bool testLoginInvalidFormat() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    Packet packet{ CommandID::LOGIN, "admin1234" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ERROR: INVALID LOGIN FORMAT" && !session.isAuthenticated()) {
+        std::cout << "PASS: Invalid login format rejected\n";
+        return true;
+    }
+    else {
+        std::cout << "FAIL: Invalid login format should be rejected\n";
+        return false;
+    }
+}
+
+// this test checks SET_MODE rejects unknown mode
+bool testSetModeUnknownMode() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+
+    Packet packet{ CommandID::SET_MODE, "VACATION" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ERROR: UNKNOWN MODE") {
+        std::cout << "PASS: Unknown mode rejected\n";
+        return true;
+    }
+    else {
+        std::cout << "FAIL: Unknown mode should be rejected\n";
+        return false;
+    }
+}
+
+// this test checks invalid command handling
+bool testInvalidCommand() {
+    StateMachine sm;
+    DeviceManager dm;
+    LogManager lm;
+    ClientSession session;
+    RequestHandler handler(sm, dm, lm);
+
+    session.setAuthenticated(true);
+
+    Packet packet{ CommandID::INVALID, "" };
+    std::string result = handler.handleRequest(packet, session);
+
+    if (result == "ERROR: INVALID COMMAND") {
+        std::cout << "PASS: Invalid command rejected\n";
+        return true;
+    }
+    else {
+        std::cout << "FAIL: Invalid command should be rejected\n";
+        return false;
+    }
+}
+
 // MAIN
 
 int main(int argc, char** argv) {
@@ -466,6 +568,11 @@ int main(int argc, char** argv) {
         {"device_command_works_in_home", testDeviceCommandWorksInHome},
         {"get_all_device_status", testGetAllDeviceStatus},
         {"log_event", testLogEvent},
+        {"home_to_maintenance", testHomeToMaintenance},
+        {"away_to_locked", testAwayToLocked},
+        {"login_invalid_format", testLoginInvalidFormat},
+        {"set_mode_unknown_mode", testSetModeUnknownMode},
+        {"invalid_command", testInvalidCommand},
     };
 
     return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

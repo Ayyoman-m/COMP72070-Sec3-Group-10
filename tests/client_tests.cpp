@@ -171,6 +171,9 @@ namespace
     }
 }
 
+// LOGIN TESTS
+
+// this test checks login success opens dashboard and persists last user
 bool testLoginSuccessShowsDashboardAndPersistsUser()
 {
     clearClientSettings();
@@ -193,6 +196,7 @@ bool testLoginSuccessShowsDashboardAndPersistsUser()
     return passed;
 }
 
+// this test checks invalid credentials stay on login and show an error
 bool testInvalidCredentialsShowError()
 {
     clearClientSettings();
@@ -212,6 +216,9 @@ bool testInvalidCredentialsShowError()
         "Client invalid credentials should stay on login and show an error");
 }
 
+// SIGN-UP TESTS
+
+// this test checks navigating from login to sign-up
 bool testShowSignUpPageNavigatesToRegistration()
 {
     SmartHomeClient client;
@@ -224,6 +231,7 @@ bool testShowSignUpPageNavigatesToRegistration()
         "Client should navigate from login to sign-up");
 }
 
+// this test checks registration stores the new account and returns to login
 bool testRegistrationAddsUserAndReturnsToLogin()
 {
     SmartHomeClient client;
@@ -246,6 +254,7 @@ bool testRegistrationAddsUserAndReturnsToLogin()
         "Client registration should store the account and return to login");
 }
 
+// this test checks a newly registered user can log in successfully
 bool testRegisteredUserCanLogin()
 {
     clearClientSettings();
@@ -273,6 +282,9 @@ bool testRegisteredUserCanLogin()
     return passed;
 }
 
+// NAVIGATION TESTS
+
+// this test checks selecting Garage routes to the security-enabled room detail page
 bool testRoomSelectionLoadsGarageDetailPage()
 {
     SmartHomeClient client;
@@ -290,6 +302,7 @@ bool testRoomSelectionLoadsGarageDetailPage()
         "Selecting Garage should open the security-enabled room detail page");
 }
 
+// this test checks Kitchen device identifiers route to the Kitchen room
 bool testDeviceSelectionRoutesKitchenDevices()
 {
     SmartHomeClient client;
@@ -306,6 +319,7 @@ bool testDeviceSelectionRoutesKitchenDevices()
         "Kitchen device identifiers should route to the Kitchen room");
 }
 
+// this test checks unknown device identifiers default to the Living Room
 bool testDeviceSelectionDefaultsToLivingRoom()
 {
     SmartHomeClient client;
@@ -322,6 +336,9 @@ bool testDeviceSelectionDefaultsToLivingRoom()
         "Unknown device identifiers should default to the Living Room");
 }
 
+// UI BEHAVIOR TESTS
+
+// this test checks sidebar toggle collapses and expands
 bool testToggleSidebarCollapsesAndExpands()
 {
     SmartHomeClient client;
@@ -340,6 +357,7 @@ bool testToggleSidebarCollapsesAndExpands()
         "Sidebar toggle should collapse and expand the navigation rail");
 }
 
+// this test checks logout closes socket, clears password, and returns to login
 bool testLogoutClearsPasswordAndReturnsToLogin()
 {
     SmartHomeClient client;
@@ -358,6 +376,9 @@ bool testLogoutClearsPasswordAndReturnsToLogin()
         "Logout should close the socket, clear the password, and return to login");
 }
 
+// NETWORKING TESTS
+
+// this test checks handleModeChange sends the expected packet to the server
 bool testModeChangeSendsExpectedPacket()
 {
     LoopbackServer server;
@@ -384,6 +405,8 @@ bool testModeChangeSendsExpectedPacket()
         "Client mode changes send the expected network packet",
         "Client mode changes should send the expected network packet");
 }
+
+// TEST RUNNER
 
 int runSelectedTests(int argc, char** argv, const TestCase* tests, int testCount)
 {
@@ -413,6 +436,96 @@ int runSelectedTests(int argc, char** argv, const TestCase* tests, int testCount
     return 1;
 }
 
+// EDGE CASE TESTS
+
+// this test checks offline login stays on login and shows server offline message
+bool testLoginWhenServerOfflineShowsSystemError()
+{
+    clearClientSettings();
+    SmartHomeClient client;
+    SmartHomeClientTestAccessor::serverPort(client) = 6553; // assume unused port
+    SmartHomeClientTestAccessor::userEdit(client)->setText("admin");
+    SmartHomeClientTestAccessor::passEdit(client)->setText("password");
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "attemptLogin");
+
+    return expect(
+        invoked &&
+        SmartHomeClientTestAccessor::centralStack(client)->currentWidget() == SmartHomeClientTestAccessor::loginWidget(client) &&
+        SmartHomeClientTestAccessor::loginStatusLabel(client)->text() == "SYSTEM ERROR: Server Offline",
+        "Offline login keeps the user on login and shows server offline",
+        "Offline login should keep the user on login and show server offline");
+}
+
+// this test checks saved last user is restored on startup
+bool testSavedLastUserLoadsOnStartup()
+{
+    clearClientSettings();
+    {
+        QSettings settings("SmartHomeProject", "ClientApp");
+        settings.setValue("lastUser", "remembered_user");
+        settings.sync();
+    }
+
+    SmartHomeClient client;
+
+    const bool passed = expect(
+        SmartHomeClientTestAccessor::userEdit(client)->text() == "remembered_user",
+        "Saved username is restored on client startup",
+        "Saved username should be restored on client startup");
+
+    clearClientSettings();
+    return passed;
+}
+
+// this test checks Living Room device identifiers route correctly
+bool testLivingRoomDeviceSelectionRoutesCorrectly()
+{
+    SmartHomeClient client;
+    const bool invoked = QMetaObject::invokeMethod(
+        &client,
+        "onDeviceSelected",
+        Q_ARG(QString, QString("LR_LIGHT_01")));
+
+    return expect(
+        invoked &&
+        SmartHomeClientTestAccessor::pageStack(client)->currentWidget() == SmartHomeClientTestAccessor::roomDetailPage(client) &&
+        SmartHomeClientTestAccessor::roomTitleLabel(*SmartHomeClientTestAccessor::roomDetailPage(client))->text() == "LIVING ROOM",
+        "Living room device identifiers route to the Living Room",
+        "Living room device identifiers should route to the Living Room");
+}
+
+// this test checks mode change without connection returns safely
+bool testModeChangeWithoutConnectionStillInvokesSafely()
+{
+    SmartHomeClient client;
+    SmartHomeClientTestAccessor::clientSocket(client) = INVALID_SOCKET;
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "handleModeChange", Q_ARG(int, 1));
+
+    return expect(
+        invoked &&
+        SmartHomeClientTestAccessor::clientSocket(client) == INVALID_SOCKET,
+        "Mode change without a connection still returns safely",
+        "Mode change without a connection should not modify the socket or fail");
+}
+
+// this test checks security image request without connection is handled safely
+bool testRequestSecurityImageWithoutConnectionIsHandled()
+{
+    SmartHomeClient client;
+    SmartHomeClientTestAccessor::clientSocket(client) = INVALID_SOCKET;
+
+    const bool invoked = QMetaObject::invokeMethod(&client, "requestSecurityImage");
+
+    return expect(
+        invoked &&
+        SmartHomeClientTestAccessor::clientSocket(client) == INVALID_SOCKET,
+        "Security image request without a connection is handled safely",
+        "Security image request without a connection should be handled safely");
+}
+
+
 int main(int argc, char** argv)
 {
     WinsockSession winsock;
@@ -430,6 +543,11 @@ int main(int argc, char** argv)
         {"toggle_sidebar_collapses_and_expands", testToggleSidebarCollapsesAndExpands},
         {"logout_clears_password_and_returns_to_login", testLogoutClearsPasswordAndReturnsToLogin},
         {"mode_change_sends_expected_packet", testModeChangeSendsExpectedPacket},
+        {"login_when_server_offline_shows_system_error", testLoginWhenServerOfflineShowsSystemError},
+        {"saved_last_user_loads_on_startup", testSavedLastUserLoadsOnStartup},
+        {"living_room_device_selection_routes_correctly", testLivingRoomDeviceSelectionRoutesCorrectly},
+        {"mode_change_without_connection_still_invokes_safely", testModeChangeWithoutConnectionStillInvokesSafely},
+        {"request_security_image_without_connection_is_handled", testRequestSecurityImageWithoutConnectionIsHandled},
     };
 
     return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

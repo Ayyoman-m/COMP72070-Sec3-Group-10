@@ -11,6 +11,7 @@
 
 class RoomDetailPage : public QWidget {
     Q_OBJECT
+    friend struct SmartHomeClientTestAccessor;
 
 public:
     explicit RoomDetailPage(QWidget* parent = nullptr);

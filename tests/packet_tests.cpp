@@ -33,6 +33,16 @@ namespace
         assert(std::memcmp(packet.getPayload(), expected, length) == 0);
     }
 
+    void assertPacketState(const NetworkPacket& packet, uint16_t commandId, uint16_t statusCode, const char* payload, unsigned int length)
+    {
+        assert(packet.getMagicNumber() == 0x7E);
+        assert(packet.getVersion() == 1);
+        assert(packet.getCommandId() == commandId);
+        assert(packet.getStatusCode() == statusCode);
+        assertPayloadEquals(packet, payload, length);
+        assert(packet.isValid());
+    }
+
     // --- TEST CASES ---
 
     void test_default_constructor()
@@ -165,6 +175,71 @@ namespace
         delete[] badChecksum;
     }
 
+    void test_empty_payload_paths()
+    {
+        NetworkPacket packet(12, 204);
+        assertPacketState(packet, 12, 204, nullptr, 0);
+
+        packet.setPayload("ON", 2);
+        assertPacketState(packet, 12, 204, "ON", 2);
+
+        packet.setPayload(nullptr, 0);
+        assertPacketState(packet, 12, 204, nullptr, 0);
+
+        unsigned int size = 0;
+        char* buffer = packet.serialize(size);
+        assert(size == 12);
+
+        NetworkPacket parsed(99, 500);
+        parsed.setPayload("junk", 4);
+        const bool success = parsed.deserialize(buffer, size);
+
+        assert(success);
+        assertPacketState(parsed, 12, 204, nullptr, 0);
+
+        NetworkPacket emptyStringPacket(7, std::string());
+        assertPacketState(emptyStringPacket, 7, 0, nullptr, 0);
+
+        delete[] buffer;
+    }
+
+    void test_deserialize_rejects_invalid_inputs_without_mutating_packet()
+    {
+        NetworkPacket original(44, 201);
+        original.setPayload("SAFE", 4);
+
+        NetworkPacket packetUnderTest = original;
+
+        unsigned int validSize = 0;
+        char* validBuffer = original.serialize(validSize);
+
+        char* badMagic = new char[validSize];
+        std::memcpy(badMagic, validBuffer, validSize);
+        badMagic[0] = 0x00;
+        assert(!packetUnderTest.deserialize(badMagic, validSize));
+        assertPacketState(packetUnderTest, 44, 201, "SAFE", 4);
+
+        char* badVersion = new char[validSize];
+        std::memcpy(badVersion, validBuffer, validSize);
+        badVersion[1] = 2;
+        assert(!packetUnderTest.deserialize(badVersion, validSize));
+        assertPacketState(packetUnderTest, 44, 201, "SAFE", 4);
+
+        char* badChecksum = new char[validSize];
+        std::memcpy(badChecksum, validBuffer, validSize);
+        badChecksum[validSize - 1] ^= 0xFF;
+        assert(!packetUnderTest.deserialize(badChecksum, validSize));
+        assertPacketState(packetUnderTest, 44, 201, "SAFE", 4);
+
+        assert(!packetUnderTest.deserialize(validBuffer, 5));
+        assertPacketState(packetUnderTest, 44, 201, "SAFE", 4);
+
+        delete[] validBuffer;
+        delete[] badMagic;
+        delete[] badVersion;
+        delete[] badChecksum;
+    }
+
     // --- TEST RUNNER ---
 
     int runSelectedTests(int argc, char** argv, const TestCase* tests, int testCount)
@@ -201,6 +276,8 @@ int main(int argc, char** argv)
         {"assignment_operator_and_self_assignment", test_assignment_operator_and_self_assignment},
         {"serialize_and_deserialize_round_trip", test_serialize_and_deserialize_round_trip},
         {"deserialize_rejects_invalid_inputs", test_deserialize_rejects_invalid_inputs},
+        {"empty_payload_paths", test_empty_payload_paths},
+        {"deserialize_rejects_invalid_inputs_without_mutating_packet", test_deserialize_rejects_invalid_inputs_without_mutating_packet},
     };
 
     const int result = runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

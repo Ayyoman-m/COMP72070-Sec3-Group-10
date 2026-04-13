@@ -20,6 +20,7 @@
 
 class SmartHomeClient : public QMainWindow {
     Q_OBJECT
+    friend struct SmartHomeClientTestAccessor;
 
 public:
     struct UserAccount {
@@ -84,4 +85,6 @@ private:
     // Networking Data
     SOCKET clientSocket;
     std::vector<UserAccount> localUserDb;
+    std::string serverIp;
+    int serverPort;
 };

@@ -1,0 +1,150 @@
+COMP72070: Project IV
+Mobile and Networked Environments
+System Testing & Logging Guide
+Winter 2026
+
+1	Overview
+Project IV focuses on System Level testing - this means looking at the complete system across all phases of the SDLC. You must complete Unit, Integration, Usability, and System testing for your project.
+   The focus is on execution and traceability of the entire testing flow. This is a group deliverable - your team works together on test planning, test definitions, test execution, and logging.
+Critical: Testing should happen continuously throughout the semester, NOT all at once at the end. The rubric specifically penalizes groups that do all testing at the last minute.
+1.1	Why Does This Matter?
+• System testing verifies the complete, integrated system fulfills its specified requirements
+• It views the system from the customer and end-user perspective (end-to-end)
+• Your SRS requirements drive what you test - if it's in the SRS, you must test it
+• Traceability answers the question: "Are we done testing?"
+1.2	How This Connects to Previous Deliverables
+DeliverableWhat It DefinedHow Testing Uses ItProposalProject concept and scopeDefines what	needs to be
+testedSRS (Requirements)Specific "shall" and "should" statementsEach	requirement	becomes one or more test casesSDD (Design)Architecture, classes, state machineTells you how to test - which components, interfaces, statesSystem TestingTest plan, test cases, test logProves the system works as specified2	Test Strategy and Plan
+2.1	Your Test Strategy (Defined for You)
+The test strategy and tool set for this course are pre-defined:
+Planning Tool
+MS Teams Planner
+Testing Tools
+• Visual Studio Enterprise Edition IDE (Community will NOT work this semester)
+• A Unit Testing Framework - MS Test has been used in class (Project I and other courses)
+• Visual Studio's Code Coverage Testing Functionality
+• GitHub for Source Control Management and Fault/Defect Tracking
+• SharePoint for Collaborative Document Development (via MS Teams)
+• Cloud-based collaboration platform for messages/video conferencing (MS Teams, eConestoga - ask Professor if you wish to use an alternative) Make sure all tools are installed and ready to go.
+2.2	Setting Up Your Test Plan in MS Teams Planner
+Create the following buckets (at minimum) in your MS Teams Planner:
+• Unit/Functional Tests - Client
+• Unit/Functional Tests - Server
+• Integration Tests
+• Usability Tests
+• System Tests
+For each task in the planner, include:
+• Realistic dates based on your development plan
+• Priorities assigned
+• Team member assignments
+• Clear descriptions of what the test covers
+2.3	Technical Reviews
+The professor checks in with groups weekly. This is your opportunity to show progress, get support, and ask questions. Come prepared with your test plan status.
+3	Understanding Testing Levels
+Your project requires testing at multiple levels. Here is what each means and how it applies to your project:
+3.1	Unit/Functional Testing (Component Level)
+• Tests individual functions, methods, or classes in isolation
+• Uses MS Test framework in Visual Studio
+• You have been doing this since Project I
+• For your project: Test individual client functions and server functions separately
+• Use Code Coverage to measure completeness (as practiced in Assignment #2)
+3.2	Integration Testing
+• Tests how modules and classes work together
+• Verifies interfaces between components
+• For your project: Test client-server communication, data packet serialization/deserialization, state machine transitions when triggered by actual commands
+• Example: Does the client correctly send a LOGIN command AND does the server correctly process it and respond?
+3.3	Usability Testing
+• Tests from the user's perspective
+• Based on your REQ-USE requirements from the SRS
+• Does the UI make sense? Are buttons labeled clearly? Is feedback provided?
+• For your project: Have someone unfamiliar with your app try to use it - can they figure out the workflow without help?
+3.4	System Testing
+• Tests the complete integrated system end-to-end
+• Verifies the system fulfills ALL specified requirements
+• Best performed in an environment similar to production
+• For your project: Start the server, connect the client, authenticate, perform all operations, transfer large data, disconnect - does everything work together?
+3.5	Testing Types Quick Reference
+TypeDescriptionApproachFunctionalTests observable input/output behaviorBlack-BoxNon-FunctionalTests how well the system performs (load, performance, security, usability)VariousRequirements-BasedVerifies each SRS requirement is implementedBlack-BoxStructured-BasedTests architecture, control flow, code pathsWhite-Box4	Test Definitions
+4.1	Step 1: Download and Set Up the Template
+1. Download ProjectIV Test Log Template.xlsx from eConestoga
+2. Copy it to your MS Teams Group Channel SharePoint folder
+3. You will work on this collaboratively with your team
+4.2	Step 2: Define Your Tests ("Test Definitions" Tab)
+Using the "Test Definitions" tab, define all tests your team will run on your software. For each test, specify:
+FieldWhat to WriteTest IDUnique identifier (e.g., UT-CLT-001, IT-001, ST-001, USE-001)Test NameClear, descriptive nameTest LevelUnit, Integration, System, or UsabilityTest TypeFunctional, Non-Functional, Requirements-Based, or StructuralRelated RequirementTrace back to your SRS (e.g., REQ-CLT-010)PreconditionsWhat must be true before running the testTest StepsWhat to do, step by stepExpected ResultWhat should happenPriorityHigh, Medium, or LowImportant: "Do not email the Professor asking for the number of tests required. There is no minimum/maximum requirement. Use your judgment. You are being marked based on your understanding of the concept of testing and making sure you are delivering a robust and quality piece of software."
+However: failure to write enough tests will result in a lower grade.
+Think about coverage across these areas:
+• Every SRS requirement should have at least one test
+• Every state machine transition should be tested
+• Error cases and edge cases, not just happy paths
+• Client tests AND server tests AND integration tests AND usability tests
+4.3	Step 3: Create Planning Tasks
+After completing Test Definitions, create corresponding tasks in MS Teams Planner:
+• Assign each test or group of tests to a team member
+• Set realistic dates
+• Set priorities
+• Track progress as tests are completed
+4.4	Example Test Definitions
+Using the Remote Photo Gallery System as an example:
+IDDescriptionLevelReqExpected ResultUT-CLT-001Login screen displays username & password fieldsUnitREQ-CLT-010Both fields visibleUT-SVR-001Server authenticates valid credentialsUnitREQ-SVR-010Returns SUCCESSIT-001Client sends LOGIN, server respondsIntegrationREQ-INT-010Client receives SUCCESS/-
+FAILUREIT-002Large	image	transfer
+(1MB+)IntegrationREQ-INT-030Complete image receivedST-001Full workflow: connect ? login ? browse ? download ? logoutSystemMultipleAll operations succeedUSE-001Error message on failed loginUsabilityREQ-USE-010Clear error shown5	Test Management
+5.1	Source Control with GitHub
+• All source code must be in your GitHub repository
+• Make sure your professor has been invited to collaborate on your repository
+• See the GitHub Requirements document for additional details
+5.2	Bug/Defect Tracking with GitHub Issues
+When a test fails, you must create a GitHub Issue:
+1. Title: Clear summary of the defect
+2. Description: What happened vs. what was expected
+3. Steps to reproduce
+4. Test case reference: Which test ID failed
+5. Requirement reference: Which SRS requirement is affected
+6. Severity/Priority
+7. Screenshots or logs if applicable
+   Reference the GitHub Issue number in your Test Log. When fixed, close the issue with a reference to the fixing commit. This provides traceability.
+5.3	Defect Classification
+Use severity classes to prioritize defects:
+ClassSeverityDescription1CriticalSystem crash, data loss, system unusable2MajorCritical functionality broken, severely limited use3NormalFunctional deviation, partially implemented, restricted use4MinorMinor deviation, system works normally5CosmeticVisual defects (spelling, layout), no functional impact6	Test Log
+6.1	Purpose
+The Test Log tracks every test execution throughout the semester. It provides traceability - proof that you tested, when you tested, and what happened. It answers: "Are we done?"
+6.2	What to Log ("Test Log" Tab)
+For every test executed (pass or fail), record:
+FieldWhat to RecordTest IDFrom your Test Definitions (e.g., UT-CLT-001)Type of TestFunctional, Non-Functional, Requirements-Based, StructuralLevel of TestUnit, Integration, System, UsabilityDate(s)When the test was executedPass/FailResult for each executionBug ReferenceIf failed: GitHub Issue numberTester NameWho executed the testNotesObservations, environment details, version tested6.3	Critical Rule: Test Throughout the Semester
+DO NOT wait until the end!
+• The rubric specifically penalizes "testing done all at once"
+• Your test log dates should show testing activity spread across multiple weeks
+• Start testing as soon as you have testable code
+• Test continuously as features are developed
+• A test log with all dates in the last week of the semester is a red flag
+7	Evaluation Rubric
+The testing deliverable is graded across multiple categories:
+7.1	Test Plan (/15 points)
+CriteriaFailPassNIGoodExc.MaxTest Cases provided and meet minimum requirements02345/5Group Test Plan document written02345/5Test Plan created in MS Teams Planner Tool02345/57.2	Test Log (/16 points)
+CriteriaFailPassNIMEEEMaxGitHub Bug/Issue Tracking Usage02345/5Project Plan has been completed01---/1Testing log shows execution of defined test cases02345/5Testing happens throughout semester (NOT just at end)02345/58	What to Hand In
+• Test Plan: Nothing to submit - your MS Teams Planner task list will be marked directly by the professor.
+• Test Definitions/Log: One team member submits the completed ProjectIV Test Log Template.xlsx.
+
+9	Tips for Exceeding Expectations
+1. Start early - begin writing test definitions as soon as your SRS is done 2. Trace every test back to a requirement - this demonstrates thoroughness
+3. Include negative tests - what happens when things go wrong?
+4. Test state machine transitions exhaustively - valid AND invalid commands in each state
+5. Keep your test log up to date weekly - don't batch it at the end
+6. Use GitHub Issues properly - detailed bug reports show professionalism
+7. Collaborate in MS Teams - the professor checks for collaboration evidence
+8. Test at all levels - don't just do unit tests; include integration, system, and usability tests
+10	Quick Reference - Testing Terminology
+TermDefinitionVerification"Did we build the system right?" - checks against specificationsValidation"Did we build the right system?" - checks it solves the real problemStatic TestingExamining artifacts without execution (reviews, inspections)Dynamic TestingTesting by executing the softwareBlack-BoxTesting without knowledge of internal structureWhite-BoxTesting based on internal code structureTest CaseA specific set of inputs, preconditions, and expected resultsTest SuiteA collection of test casesDefect/BugA deviation from expected behaviorTraceabilityThe ability to link tests back to requirements and defectsCode CoverageThe percentage of code exercised by testsRegression TestingRe-running tests after changes to ensure nothing broke
+A well-tested system is a well-understood system. Test early, test often, and trace everything.
+System Testing & Logging Guide	COMP72070 - Project IV
+
+System Testing & Logging Guide	COMP72070 - Project IV
+
+Page 1
+
+Page 1
+
+System Testing & Logging Guide	COMP72070 - Project IV
+
+Page 1
+

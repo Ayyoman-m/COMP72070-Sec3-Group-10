@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include<fstream>
 #include "../server/Header/StateMachine.h"
 #include "../server/Header/RequestHandler.h"
@@ -6,51 +7,66 @@
 #include "../server/Header/DeviceManager.h"
 #include "../server/Header/LogManager.h"
 
+namespace
+{
+    struct TestCase
+    {
+        const char* name;
+        bool (*function)();
+    };
+}
+
 
 // STATE MACHINE TESTS
 
 // this test checks if the server starts in LOCKED state
-void testInitialState() {
+bool testInitialState() {
     StateMachine sm;
 
     if (sm.getState() == ServerState::LOCKED) {
         std::cout << "PASS: Initial state is LOCKED\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Initial state should be LOCKED\n";
+        return false;
     }
 }
 
 // this test checks valid transition from LOCKED to HOME
-void testLockedToHome() {
+bool testLockedToHome() {
     StateMachine sm;
 
     bool result = sm.setState(ServerState::HOME);
 
     if (result && sm.getState() == ServerState::HOME) {
         std::cout << "PASS: LOCKED -> HOME\n";
+        return true;
     }
     else {
         std::cout << "FAIL: LOCKED -> HOME should be valid\n";
+        return false;
     }
 }
 
 // this test checks invalid transition from LOCKED to AWAY
-void testLockedToAwayInvalid() {
+bool testLockedToAwayInvalid() {
     StateMachine sm;
 
     bool result = sm.setState(ServerState::AWAY);
 
     if (!result && sm.getState() == ServerState::LOCKED) {
         std::cout << "PASS: LOCKED -> AWAY rejected\n";
+        return true;
     }
     else {
         std::cout << "FAIL: LOCKED -> AWAY should be invalid\n";
+        return false;
     }
 }
 
 // this test checks valid transition from HOME to AWAY
-void testHomeToAway() {
+bool testHomeToAway() {
     StateMachine sm;
     sm.setState(ServerState::HOME);
 
@@ -58,16 +74,18 @@ void testHomeToAway() {
 
     if (result && sm.getState() == ServerState::AWAY) {
         std::cout << "PASS: HOME -> AWAY\n";
+        return true;
     }
     else {
         std::cout << "FAIL: HOME -> AWAY should be valid\n";
+        return false;
     }
 }
 
 // REQUEST HANDLER TESTS
 
 // this test checks GET_STATUS returns LOCKED at start
-void testGetStatusInitiallyLocked() {
+bool testGetStatusInitiallyLocked() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -79,14 +97,16 @@ void testGetStatusInitiallyLocked() {
 
     if (result == "LOCKED") {
         std::cout << "PASS: GET_STATUS returns LOCKED\n";
+        return true;
     }
     else {
         std::cout << "FAIL: GET_STATUS should return LOCKED\n";
+        return false;
     }
 }
 
 // this test checks SET_MODE fails without login
-void testSetModeWithoutAuthFails() {
+bool testSetModeWithoutAuthFails() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -98,14 +118,16 @@ void testSetModeWithoutAuthFails() {
 
     if (result == "ERROR: NOT AUTHENTICATED") {
         std::cout << "PASS: SET_MODE blocked without auth\n";
+        return true;
     }
     else {
         std::cout << "FAIL: SET_MODE should fail without auth\n";
+        return false;
     }
 }
 
 // this test checks SET_MODE works after login
-void testSetModeWithAuthWorks() {
+bool testSetModeWithAuthWorks() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -119,16 +141,18 @@ void testSetModeWithAuthWorks() {
 
     if (result == "SUCCESS" && sm.getState() == ServerState::HOME) {
         std::cout << "PASS: SET_MODE HOME works after login\n";
+        return true;
     }
     else {
         std::cout << "FAIL: SET_MODE HOME should work after login\n";
+        return false;
     }
 }
 
 // AUTH MANAGER TESTS
 
 // this test checks valid login
-void testValidLogin() {
+bool testValidLogin() {
     AuthManager auth;
     ClientSession session;
 
@@ -136,14 +160,16 @@ void testValidLogin() {
 
     if (result && session.isAuthenticated()) {
         std::cout << "PASS: Valid login works\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Valid login should succeed\n";
+        return false;
     }
 }
 
 // this test checks invalid login
-void testInvalidLogin() {
+bool testInvalidLogin() {
     AuthManager auth;
     ClientSession session;
 
@@ -151,30 +177,34 @@ void testInvalidLogin() {
 
     if (!result && !session.isAuthenticated()) {
         std::cout << "PASS: Invalid login rejected\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Invalid login should fail\n";
+        return false;
     }
 }
 
 // DEVICE MANAGER TESTS
 
 // this test checks device turns ON
-void testTurnOnDevice() {
+bool testTurnOnDevice() {
     DeviceManager dm;
 
     bool result = dm.turnOn("LIGHT");
 
     if (result && dm.getStatus("LIGHT") == "ON") {
         std::cout << "PASS: LIGHT turned ON\n";
+        return true;
     }
     else {
         std::cout << "FAIL: LIGHT should turn ON\n";
+        return false;
     }
 }
 
 // this test checks device turns OFF
-void testTurnOffDevice() {
+bool testTurnOffDevice() {
     DeviceManager dm;
 
     dm.turnOn("FAN");
@@ -182,30 +212,34 @@ void testTurnOffDevice() {
 
     if (result && dm.getStatus("FAN") == "OFF") {
         std::cout << "PASS: FAN turned OFF\n";
+        return true;
     }
     else {
         std::cout << "FAIL: FAN should turn OFF\n";
+        return false;
     }
 }
 
 // this test checks invalid device handling
-void testInvalidDevice() {
+bool testInvalidDevice() {
     DeviceManager dm;
 
     std::string result = dm.getStatus("TV");
 
     if (result == "DEVICE NOT FOUND") {
         std::cout << "PASS: Invalid device handled\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Invalid device should return error\n";
+        return false;
     }
 }
 
 // DEVICE INTEGRATION TESTS
 
 // this test checks turning on device through request handler
-void testTurnOnDeviceThroughHandler() {
+bool testTurnOnDeviceThroughHandler() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -220,14 +254,16 @@ void testTurnOnDeviceThroughHandler() {
 
     if (result == "SUCCESS" && dm.getStatus("LIGHT") == "ON") {
         std::cout << "PASS: RequestHandler turns LIGHT ON\n";
+        return true;
     }
     else {
         std::cout << "FAIL: RequestHandler should turn LIGHT ON\n";
+        return false;
     }
 }
 
 // this test checks getting device status through request handler
-void testGetDeviceStatusThroughHandler() {
+bool testGetDeviceStatusThroughHandler() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -243,14 +279,16 @@ void testGetDeviceStatusThroughHandler() {
 
     if (result == "ON") {
         std::cout << "PASS: RequestHandler gets device status\n";
+        return true;
     }
     else {
         std::cout << "FAIL: RequestHandler should return device status\n";
+        return false;
     }
 }
 
 // this test checks device command is rejected in LOCKED
-void testDeviceCommandRejectedInLocked() {
+bool testDeviceCommandRejectedInLocked() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -264,14 +302,16 @@ void testDeviceCommandRejectedInLocked() {
 
     if (result == "ERROR: DEVICE COMMAND NOT ALLOWED IN CURRENT STATE") {
         std::cout << "PASS: Device command rejected in LOCKED\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Device command should be rejected in LOCKED\n";
+        return false;
     }
 }
 
 // this test checks device command is rejected in MAINTENANCE
-void testDeviceCommandRejectedInMaintenance() {
+bool testDeviceCommandRejectedInMaintenance() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -287,14 +327,16 @@ void testDeviceCommandRejectedInMaintenance() {
 
     if (result == "ERROR: DEVICE COMMAND NOT ALLOWED IN CURRENT STATE") {
         std::cout << "PASS: Device command rejected in MAINTENANCE\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Device command should be rejected in MAINTENANCE\n";
+        return false;
     }
 }
 
 // this test checks device command works in HOME
-void testDeviceCommandWorksInHome() {
+bool testDeviceCommandWorksInHome() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -309,14 +351,16 @@ void testDeviceCommandWorksInHome() {
 
     if (result == "SUCCESS" && dm.getStatus("LIGHT") == "ON") {
         std::cout << "PASS: Device command works in HOME\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Device command should work in HOME\n";
+        return false;
     }
 }
 
 // this test checks full device status list
-void testGetAllDeviceStatus() {
+bool testGetAllDeviceStatus() {
     StateMachine sm;
     DeviceManager dm;
     LogManager lm;
@@ -334,16 +378,18 @@ void testGetAllDeviceStatus() {
 
     if (result.find("LIGHT=ON") != std::string::npos) {
         std::cout << "PASS: Full device status list returned\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Full device status list should include LIGHT=ON\n";
+        return false;
     }
 }
 
 // LOG MANAGER TEST
 
 // this test checks log file writing
-void testLogEvent() {
+bool testLogEvent() {
     LogManager lm;
 
     lm.logEvent("TEST LOG ENTRY");
@@ -361,47 +407,66 @@ void testLogEvent() {
 
     if (found) {
         std::cout << "PASS: Log entry written\n";
+        return true;
     }
     else {
         std::cout << "FAIL: Log entry should be written\n";
+        return false;
     }
+}
+
+int runSelectedTests(int argc, char** argv, const TestCase* tests, int testCount)
+{
+    if (argc <= 1)
+    {
+        bool allPassed = true;
+        for (int i = 0; i < testCount; ++i)
+        {
+            if (!tests[i].function())
+            {
+                allPassed = false;
+            }
+        }
+        return allPassed ? 0 : 1;
+    }
+
+    const std::string selectedTest = argv[1];
+    for (int i = 0; i < testCount; ++i)
+    {
+        if (selectedTest == tests[i].name)
+        {
+            return tests[i].function() ? 0 : 1;
+        }
+    }
+
+    std::cerr << "Unknown server test: " << selectedTest << std::endl;
+    return 1;
 }
 
 // MAIN
 
-int main() {
-    // running all tests one by one
+int main(int argc, char** argv) {
+    const TestCase tests[] = {
+        {"initial_state", testInitialState},
+        {"locked_to_home", testLockedToHome},
+        {"locked_to_away_invalid", testLockedToAwayInvalid},
+        {"home_to_away", testHomeToAway},
+        {"get_status_initially_locked", testGetStatusInitiallyLocked},
+        {"set_mode_without_auth_fails", testSetModeWithoutAuthFails},
+        {"set_mode_with_auth_works", testSetModeWithAuthWorks},
+        {"valid_login", testValidLogin},
+        {"invalid_login", testInvalidLogin},
+        {"turn_on_device", testTurnOnDevice},
+        {"turn_off_device", testTurnOffDevice},
+        {"invalid_device", testInvalidDevice},
+        {"turn_on_device_through_handler", testTurnOnDeviceThroughHandler},
+        {"get_device_status_through_handler", testGetDeviceStatusThroughHandler},
+        {"device_command_rejected_in_locked", testDeviceCommandRejectedInLocked},
+        {"device_command_rejected_in_maintenance", testDeviceCommandRejectedInMaintenance},
+        {"device_command_works_in_home", testDeviceCommandWorksInHome},
+        {"get_all_device_status", testGetAllDeviceStatus},
+        {"log_event", testLogEvent},
+    };
 
-    std::cout << "---- Running StateMachine Tests ----\n";
-    testInitialState();
-    testLockedToHome();
-    testLockedToAwayInvalid();
-    testHomeToAway();
-
-    std::cout << "\n---- Running RequestHandler Tests ----\n";
-    testGetStatusInitiallyLocked();
-    testSetModeWithoutAuthFails();
-    testSetModeWithAuthWorks();
-
-    std::cout << "\n---- Running AuthManager Tests ----\n";
-    testValidLogin();
-    testInvalidLogin();
-
-    std::cout << "\n---- Running DeviceManager Tests ----\n";
-    testTurnOnDevice();
-    testTurnOffDevice();
-    testInvalidDevice();
-
-    std::cout << "\n---- Running Device Integration Tests ----\n";
-    testTurnOnDeviceThroughHandler();
-    testGetDeviceStatusThroughHandler();
-    testDeviceCommandRejectedInLocked();
-    testDeviceCommandRejectedInMaintenance();
-    testDeviceCommandWorksInHome();
-    testGetAllDeviceStatus();
-
-    std::cout << "\n---- Running LogManager Tests ----\n";
-    testLogEvent();
-
-    return 0;
+    return runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));
 }

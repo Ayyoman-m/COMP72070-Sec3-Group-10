@@ -13,13 +13,24 @@
             <ModulePaths>
               <Include>
                 <ModulePath>.*\\PacketTests\.exe$</ModulePath>
+                <ModulePath>.*\\ClientTests\.exe$</ModulePath>
                 <ModulePath>.*\\NetworkManagerTests\.exe$</ModulePath>
+                <ModulePath>.*\\Test_Server\.exe$</ModulePath>
+                <ModulePath>.*\\RequestIntegrationTests\.exe$</ModulePath>
               </Include>
             </ModulePaths>
             <Sources>
               <Include>
-                <Source>.*\\src\\server\\packet\.cpp$</Source>
+                <Source>.*\\src\\server\\AuthManager\.cpp$</Source>
+                <Source>.*\\src\\client\\SmartHomeClient\.cpp$</Source>
+                <Source>.*\\src\\client\\pages\\HomePage\.cpp$</Source>
+                <Source>.*\\src\\client\\pages\\RoomDetailPage\.cpp$</Source>
+                <Source>.*\\src\\server\\DeviceManager\.cpp$</Source>
+                <Source>.*\\src\\server\\LogManager\.cpp$</Source>
                 <Source>.*\\src\\server\\NetworkManager\.cpp$</Source>
+                <Source>.*\\src\\server\\NetworkPacket\.cpp$</Source>
+                <Source>.*\\src\\server\\RequestHandler\.cpp$</Source>
+                <Source>.*\\src\\server\\StateMachine\.cpp$</Source>
               </Include>
               <Exclude>
                 <Source>.*\\tests\\.*</Source>
@@ -29,8 +40,16 @@
             </Sources>
             <Functions>
               <Include>
-                <Function>^Packet::.*</Function>
+                <Function>^AuthManager::.*</Function>
+                <Function>^SmartHomeClient::.*</Function>
+                <Function>^HomePage::.*</Function>
+                <Function>^RoomDetailPage::.*</Function>
+                <Function>^DeviceManager::.*</Function>
+                <Function>^LogManager::.*</Function>
                 <Function>^NetworkManager::.*</Function>
+                <Function>^NetworkPacket::.*</Function>
+                <Function>^RequestHandler::.*</Function>
+                <Function>^StateMachine::.*</Function>
               </Include>
               <Exclude>
                 <Function>^main$</Function>

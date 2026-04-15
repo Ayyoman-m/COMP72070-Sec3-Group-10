@@ -76,22 +76,54 @@ char* NetworkPacket::serialize(uint32_t& outSize) const {
 bool NetworkPacket::deserialize(const char* data, uint32_t size) {
     if (!data || size < 12) return false;
 
-    magicNumber = data[0];
-    version = data[1];
-    std::memcpy(&commandId, data + 2, 2);
-    std::memcpy(&statusCode, data + 4, 2);
-    std::memcpy(&payloadLength, data + 6, 4);
+    const uint8_t originalMagicNumber = magicNumber;
+    const uint8_t originalVersion = version;
+    const uint16_t originalCommandId = commandId;
+    const uint16_t originalStatusCode = statusCode;
+    const uint32_t originalPayloadLength = payloadLength;
+    const std::vector<char> originalPayload = payload;
+    const uint16_t originalChecksum = checksum;
+
+    uint8_t parsedMagicNumber = data[0];
+    uint8_t parsedVersion = data[1];
+    uint16_t parsedCommandId = 0;
+    uint16_t parsedStatusCode = 0;
+    uint32_t parsedPayloadLength = 0;
+    uint16_t parsedChecksum = 0;
+    std::vector<char> parsedPayload;
+
+    std::memcpy(&parsedCommandId, data + 2, 2);
+    std::memcpy(&parsedStatusCode, data + 4, 2);
+    std::memcpy(&parsedPayloadLength, data + 6, 4);
 
     // Bounds check to prevent buffer overflow
-    if (size < (10 + payloadLength + 2)) return false;
+    if (size < (10 + parsedPayloadLength + 2)) return false;
 
-    if (payloadLength > 0) {
-        payload.assign(data + 10, data + 10 + payloadLength);
-    }
-    else {
-        payload.clear();
+    if (parsedPayloadLength > 0) {
+        parsedPayload.assign(data + 10, data + 10 + parsedPayloadLength);
     }
 
-    std::memcpy(&checksum, data + 10 + payloadLength, 2);
-    return isValid();
+    std::memcpy(&parsedChecksum, data + 10 + parsedPayloadLength, 2);
+
+    magicNumber = parsedMagicNumber;
+    version = parsedVersion;
+    commandId = parsedCommandId;
+    statusCode = parsedStatusCode;
+    payloadLength = parsedPayloadLength;
+    payload = parsedPayload;
+    checksum = parsedChecksum;
+
+    const bool valid = isValid();
+    if (valid) {
+        return true;
+    }
+
+    magicNumber = originalMagicNumber;
+    version = originalVersion;
+    commandId = originalCommandId;
+    statusCode = originalStatusCode;
+    payloadLength = originalPayloadLength;
+    payload = originalPayload;
+    checksum = originalChecksum;
+    return false;
 }

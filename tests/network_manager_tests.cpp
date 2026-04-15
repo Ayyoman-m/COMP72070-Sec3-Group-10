@@ -137,6 +137,21 @@ namespace
         assert(std::memcmp(received, payload, sizeof(payload)) == 0);
     }
 
+    void test_send_all_zero_size_returns_true()
+    {
+        SocketPair sockets;
+        const bool ok = NetworkManager::sendAll(sockets.client, "", 0);
+        assert(ok);
+    }
+
+    void test_recv_all_zero_size_returns_true()
+    {
+        SocketPair sockets;
+        char buffer[1] = {};
+        const bool ok = NetworkManager::recvAll(sockets.server, buffer, 0);
+        assert(ok);
+    }
+
     void test_recv_all_multiple_iterations()
     {
         // Simulates a slow network where data arrives in small chunks.
@@ -187,6 +202,54 @@ namespace
         assertPacketEquals(receivedPacket, 42, 200, payload, sizeof(payload));
     }
 
+    void test_send_packet_and_receive_packet_with_empty_payload()
+    {
+        SocketPair sockets;
+        NetworkPacket sentPacket(43, 204);
+        NetworkPacket receivedPacket;
+
+        std::thread receiver([&]() {
+            const bool ok = NetworkManager::receivePacket(sockets.server, receivedPacket);
+            assert(ok);
+            });
+
+        const bool ok = NetworkManager::sendPacket(sockets.client, sentPacket);
+        assert(ok);
+
+        receiver.join();
+        assertPacketEquals(receivedPacket, 43, 204, nullptr, 0);
+    }
+
+    void test_send_all_failure_on_invalid_socket()
+    {
+        const char payload[] = "fail";
+        const bool ok = NetworkManager::sendAll(INVALID_SOCKET, payload, static_cast<int>(sizeof(payload)));
+        assert(!ok);
+    }
+
+    void test_send_packet_failure_on_invalid_socket()
+    {
+        NetworkPacket packet(55, 500);
+        packet.setPayload("FAIL", 4);
+
+        const bool ok = NetworkManager::sendPacket(INVALID_SOCKET, packet);
+        assert(!ok);
+    }
+
+    void test_recv_all_failure_on_invalid_socket()
+    {
+        char buffer[4] = {};
+        const bool ok = NetworkManager::recvAll(INVALID_SOCKET, buffer, sizeof(buffer));
+        assert(!ok);
+    }
+
+    void test_receive_packet_header_failure_on_invalid_socket()
+    {
+        NetworkPacket packet;
+        const bool ok = NetworkManager::receivePacket(INVALID_SOCKET, packet);
+        assert(!ok);
+    }
+
     void test_receive_packet_rejects_invalid_checksum()
     {
         // Security check: If a packet is tampered with on the wire, the 
@@ -208,6 +271,50 @@ namespace
         NetworkPacket receivedPacket;
         const bool ok = NetworkManager::receivePacket(sockets.server, receivedPacket);
         assert(!ok); // Should fail validation
+
+        sender.join();
+        delete[] serialized;
+    }
+
+    void test_receive_packet_rejects_invalid_magic()
+    {
+        SocketPair sockets;
+        NetworkPacket packet(13, 401);
+        packet.setPayload("BAD", 3);
+
+        unsigned int size = 0;
+        char* serialized = packet.serialize(size);
+        serialized[0] = 0x00;
+
+        std::thread sender([&]() {
+            NetworkManager::sendAll(sockets.client, serialized, static_cast<int>(size));
+            });
+
+        NetworkPacket receivedPacket;
+        const bool ok = NetworkManager::receivePacket(sockets.server, receivedPacket);
+        assert(!ok);
+
+        sender.join();
+        delete[] serialized;
+    }
+
+    void test_receive_packet_rejects_invalid_version()
+    {
+        SocketPair sockets;
+        NetworkPacket packet(14, 402);
+        packet.setPayload("BAD", 3);
+
+        unsigned int size = 0;
+        char* serialized = packet.serialize(size);
+        serialized[1] = 2;
+
+        std::thread sender([&]() {
+            NetworkManager::sendAll(sockets.client, serialized, static_cast<int>(size));
+            });
+
+        NetworkPacket receivedPacket;
+        const bool ok = NetworkManager::receivePacket(sockets.server, receivedPacket);
+        assert(!ok);
 
         sender.join();
         delete[] serialized;
@@ -238,6 +345,28 @@ namespace
 
         sender.join();
         delete[] serialized;
+    }
+
+    void test_receive_packet_rejects_oversized_payload_length()
+    {
+        SocketPair sockets;
+        char header[10] = {};
+        header[0] = static_cast<char>(0x7E);
+        header[1] = 1;
+
+        const uint32_t oversizedPayloadLength = 2000001;
+        std::memcpy(header + 6, &oversizedPayloadLength, sizeof(oversizedPayloadLength));
+
+        std::thread sender([&]() {
+            NetworkManager::sendAll(sockets.client, header, static_cast<int>(sizeof(header)));
+            shutdown(sockets.client, SD_SEND);
+            });
+
+        NetworkPacket receivedPacket;
+        const bool ok = NetworkManager::receivePacket(sockets.server, receivedPacket);
+        assert(!ok);
+
+        sender.join();
     }
 
     // --- BOILERPLATE TEST RUNNER ---
@@ -274,11 +403,20 @@ int main(int argc, char** argv)
 
     const TestCase tests[] = {
         {"send_all_and_recv_all", test_send_all_and_recv_all},
+        {"send_all_zero_size_returns_true", test_send_all_zero_size_returns_true},
+        {"recv_all_zero_size_returns_true", test_recv_all_zero_size_returns_true},
         {"recv_all_multiple_iterations", test_recv_all_multiple_iterations},
         {"send_packet_and_receive_packet", test_send_packet_and_receive_packet},
+        {"send_packet_and_receive_packet_with_empty_payload", test_send_packet_and_receive_packet_with_empty_payload},
+        {"send_all_failure_on_invalid_socket", test_send_all_failure_on_invalid_socket},
+        {"send_packet_failure_on_invalid_socket", test_send_packet_failure_on_invalid_socket},
+        {"recv_all_failure_on_invalid_socket", test_recv_all_failure_on_invalid_socket},
+        {"receive_packet_header_failure_on_invalid_socket", test_receive_packet_header_failure_on_invalid_socket},
         {"receive_packet_rejects_invalid_checksum", test_receive_packet_rejects_invalid_checksum},
+        {"receive_packet_rejects_invalid_magic", test_receive_packet_rejects_invalid_magic},
+        {"receive_packet_rejects_invalid_version", test_receive_packet_rejects_invalid_version},
         {"receive_packet_fails_on_incomplete_payload", test_receive_packet_fails_on_incomplete_payload},
-        // ... (Add your other failure cases here as needed)
+        {"receive_packet_rejects_oversized_payload_length", test_receive_packet_rejects_oversized_payload_length},
     };
 
     const int result = runSelectedTests(argc, argv, tests, static_cast<int>(sizeof(tests) / sizeof(tests[0])));

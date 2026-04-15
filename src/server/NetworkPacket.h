@@ -29,7 +29,7 @@ public:
     uint16_t getCommandId() const { return commandId; }
     uint16_t getStatusCode() const { return statusCode; }
     uint32_t getPayloadLength() const { return payloadLength; }
-    const char* getPayload() const { return payload.data(); }
+    const char* getPayload() const { return payload.empty() ? nullptr : payload.data(); }
     uint16_t getChecksum() const { return checksum; }
 
     // Setters

@@ -21,7 +21,11 @@
 #include "pages/SettingsPage.h"
 
 SmartHomeClient::SmartHomeClient(QWidget* parent)
-    : QMainWindow(parent), isSidebarCollapsed(false), clientSocket(INVALID_SOCKET)
+    : QMainWindow(parent),
+    isSidebarCollapsed(false),
+    clientSocket(INVALID_SOCKET),
+    serverIp("127.0.0.1"),
+    serverPort(8080)
 {
     localUserDb.push_back({ "admin", "password", "admin@smarthome.pro" });
 
@@ -267,7 +271,7 @@ bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
 }
 
 void SmartHomeClient::attemptLogin() {
-    if (!connectToServer("127.0.0.1", 8080)) {
+    if (!connectToServer(serverIp, serverPort)) {
         loginStatusLabel->setText("SYSTEM ERROR: Server Offline");
         loginStatusLabel->setStyleSheet("color: #E06C75; font-weight: bold;");
         return;

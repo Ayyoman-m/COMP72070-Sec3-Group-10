@@ -290,7 +290,7 @@ void SmartHomeClient::attemptLogin() {
         showToast("Welcome back, " + inputUser);
     }
     else {
-        loginStatusLabel->setText("Access Denied: Invalid Credentials");
+        loginStatusLabel->setText("The username you entered does not exist. Please try again.");
         loginStatusLabel->setStyleSheet("color: #E06C75;");
     }
 }

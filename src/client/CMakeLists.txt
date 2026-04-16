@@ -6,6 +6,11 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 # 2. Find Qt6 Widgets
+# Visual Studio's CMake integration does not always apply presets/workspace settings.
+# If the user has QTDIR set, make sure CMake can find Qt without hardcoded paths.
+if(DEFINED ENV{QTDIR})
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{QTDIR}")
+endif()
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 # 3. Define the File Lists

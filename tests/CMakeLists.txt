@@ -1,3 +1,8 @@
+
+# If the user has QTDIR set, make sure CMake can find Qt without hardcoded paths.
+if(DEFINED ENV{QTDIR})
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{QTDIR}")
+endif()
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 # Packet tests

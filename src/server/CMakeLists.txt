@@ -1,4 +1,8 @@
 # 1. Find Qt6 (Required for ServerApp)
+# If the user has QTDIR set, make sure CMake can find Qt without hardcoded paths.
+if(DEFINED ENV{QTDIR})
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{QTDIR}")
+endif()
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 # 2. Server library with all logic and networking

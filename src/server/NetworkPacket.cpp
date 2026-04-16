@@ -97,7 +97,9 @@ bool NetworkPacket::deserialize(const char* data, uint32_t size) {
     std::memcpy(&parsedPayloadLength, data + 6, 4);
 
     // Bounds check to prevent buffer overflow
-    if (size < (10 + parsedPayloadLength + 2)) return false;
+    if (parsedPayloadLength > (size - 12)) {
+        return false;
+    }
 
     if (parsedPayloadLength > 0) {
         parsedPayload.assign(data + 10, data + 10 + parsedPayloadLength);

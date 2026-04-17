@@ -1,6 +1,16 @@
 #include "Header/AuthManager.h"
 
-// this function checks login credentials
+/**
+ * @brief Validates user credentials and updates session.
+ *
+ * Compares provided username and password against stored values.
+ * If valid, the session is marked as authenticated.
+ *
+ * @param username User's username
+ * @param password User's password
+ * @param session Client session to update
+ * @return true if login is successful, false otherwise
+ */
 bool AuthManager::login(const std::string& username, const std::string& password, ClientSession& session) {
 
     // using hardcoded username and password

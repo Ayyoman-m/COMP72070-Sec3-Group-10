@@ -7,10 +7,21 @@
 #include <QPushButton>
 #include <QCheckBox>
 
+/**
+ * @brief Constructs the SettingsPage.
+ *
+ * Initializes the UI for system configuration and preferences.
+ */
 SettingsPage::SettingsPage(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Sets up the settings page UI.
+ *
+ * Creates sections for general settings and network configuration,
+ * including server IP and port settings.
+ */
 void SettingsPage::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(40, 40, 40, 40);
@@ -38,7 +49,6 @@ void SettingsPage::setupUi() {
         "Toggle high-contrast dark theme (Always On)"
     ));
 
-    // --- CONNECTIVITY SECTION ---
     mainLayout->addWidget(createSectionHeader("CONNECTIVITY"));
 
     // Server IP Row
@@ -81,14 +91,25 @@ void SettingsPage::setupUi() {
     mainLayout->addWidget(btnSave);
 }
 
-// Helper to create clean headers
+/**
+ * @brief Creates a section header label.
+ *
+ * @param title Section title text
+ * @return QWidget pointer to the header label
+ */
 QWidget* SettingsPage::createSectionHeader(QString title) {
     QLabel* header = new QLabel(title);
     header->setStyleSheet("color: #56B6C2; font-weight: bold; letter-spacing: 1.5px; margin-top: 10px;");
     return header;
 }
 
-// Helper to fix the "Squashed" text issue
+/**
+ * @brief Creates a settings row with title, description, and toggle.
+ *
+ * @param title Setting name
+ * @param description Description of the setting
+ * @return QWidget pointer to the created row
+ */
 QWidget* SettingsPage::createSettingRow(QString title, QString description) {
     QWidget* row = new QWidget();
     row->setFixedHeight(60); // Give it enough vertical room

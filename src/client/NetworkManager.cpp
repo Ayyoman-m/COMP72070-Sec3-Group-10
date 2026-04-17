@@ -3,10 +3,17 @@
 #include <cstring>
 
 /**
- * Reliable transmission of raw data over a TCP socket.
- * TCP may fragment data; this loop ensures we don't return until every
- * single byte requested has been successfully sent.
+ * @brief Sends all data over a TCP socket.
+ *
+ * Ensures that all bytes are transmitted, even if multiple send operations
+ * are required due to TCP fragmentation.
+ *
+ * @param clientSocket Socket used for communication
+ * @param data Buffer containing data to send
+ * @param size Number of bytes to send
+ * @return true if all data was sent successfully, false otherwise
  */
+
 bool NetworkManager::sendAll(SOCKET clientSocket, const char* data, int size)
 {
     int totalSent = 0;
@@ -29,9 +36,15 @@ bool NetworkManager::sendAll(SOCKET clientSocket, const char* data, int size)
 }
 
 /**
- * Reliable reception of raw data from a TCP socket.
- * This blocks until the specific 'size' of data requested is fully received,
- * preventing us from processing incomplete headers or payloads.
+ * @brief Receives all data from a TCP socket.
+ *
+ * Blocks until the requested number of bytes are fully received,
+ * ensuring complete data before processing.
+ *
+ * @param clientSocket Socket used for communication
+ * @param buffer Buffer to store received data
+ * @param size Number of bytes to receive
+ * @return true if all data was received successfully, false otherwise
  */
 bool NetworkManager::recvAll(SOCKET clientSocket, char* buffer, int size)
 {
@@ -54,8 +67,13 @@ bool NetworkManager::recvAll(SOCKET clientSocket, char* buffer, int size)
 }
 
 /**
- * High-level helper to transmit a NetworkPacket object.
- * Uses uint32_t to match the NetworkPacket class exactly.
+ * @brief Sends a NetworkPacket over the socket.
+ *
+ * Serializes the packet into binary format and transmits it using sendAll().
+ *
+ * @param clientSocket Socket used for communication
+ * @param packet Packet to be sent
+ * @return true if packet was sent successfully, false otherwise
  */
 bool NetworkManager::sendPacket(SOCKET clientSocket, const NetworkPacket& packet)
 {
@@ -73,8 +91,14 @@ bool NetworkManager::sendPacket(SOCKET clientSocket, const NetworkPacket& packet
 }
 
 /**
- * High-level helper to reconstruct a NetworkPacket from the wire.
- * This reads the fixed 10-byte header first to determine the payload size.
+ * @brief Receives and reconstructs a NetworkPacket from the socket.
+ *
+ * First reads the fixed-size header to determine payload size, then
+ * receives the remaining data and reconstructs the packet.
+ *
+ * @param clientSocket Socket used for communication
+ * @param packet Reference to store the received packet
+ * @return true if packet was received and deserialized successfully, false otherwise
  */
 bool NetworkManager::receivePacket(SOCKET clientSocket, NetworkPacket& packet)
 {

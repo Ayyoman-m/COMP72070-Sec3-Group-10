@@ -1,11 +1,25 @@
 #include "Header/RequestHandler.h"
 #include "Header/AuthManager.h"
 
-// constructor
+/**
+ * @brief Constructs the RequestHandler.
+ *
+ * Initializes references to system components including
+ * state machine, device manager, and log manager.
+ */
 RequestHandler::RequestHandler(StateMachine& sm, DeviceManager& dm, LogManager& lm)
     : stateMachine(sm), deviceManager(dm), logManager(lm) {}
 
-// handles incoming request
+/**
+ * @brief Processes incoming client requests.
+ *
+ * Handles authentication, system state queries, mode changes,
+ * and device control operations based on command type.
+ *
+ * @param packet Incoming request packet
+ * @param session Client session
+ * @return Response string to be sent back to client
+ */
 std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& session) {
 
     // logging received command
@@ -129,7 +143,17 @@ std::string RequestHandler::handleRequest(const Packet& packet, ClientSession& s
     return "ERROR: INVALID COMMAND";
 }
 
-// This bridges the networking binary Packet to the server string-based logic
+/**
+ * @brief Converts network-level packet to logical request.
+ *
+ * Maps numeric command IDs from binary packets to internal
+ * CommandID enum and forwards processing to handleRequest().
+ *
+ * @param commandId Numeric command identifier
+ * @param data Payload data
+ * @param session Client session
+ * @return Response string
+ */
 std::string RequestHandler::handleNetworkPacket(unsigned short commandId,
     const std::string& data,
     ClientSession& session)

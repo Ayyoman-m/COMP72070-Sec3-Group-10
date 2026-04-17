@@ -5,16 +5,33 @@
 #include <QScrollArea>
 #include <QComboBox>
 
+/**
+ * @brief Constructs the HomePage dashboard.
+ *
+ * Initializes the main layout and sets up UI components.
+ */
 HomePage::HomePage(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Sets up the main UI layout for the dashboard.
+ *
+ * Creates the top bar and initializes grid/list view switching.
+ */
 void HomePage::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(10);
 
-    // 1. Create and add the Top Bar
+     /**
+     * @brief Creates the top status bar for the dashboard.
+     *
+     * Includes system mode selector, temperature display,
+     * and view toggle buttons.
+     *
+     * Implements REQ-SVR-030 (mode selection).
+     */
     mainLayout->addWidget(createTopBar());
 
     // 2. Setup the view stack for Grid/List toggling
@@ -80,18 +97,29 @@ QWidget* HomePage::createTopBar() {
     return bar;
 }
 
+/**
+ * @brief Switches the view to grid layout.
+ */
 void HomePage::switchToGrid() {
     viewStack->setCurrentIndex(0);
     btnGrid->setStyleSheet(StyleManager::getToggleButtonStyle(true));
     btnList->setStyleSheet(StyleManager::getToggleButtonStyle(false));
 }
 
+/**
+ * @brief Switches the view to list layout.
+ */
 void HomePage::switchToList() {
     viewStack->setCurrentIndex(1);
     btnGrid->setStyleSheet(StyleManager::getToggleButtonStyle(false));
     btnList->setStyleSheet(StyleManager::getToggleButtonStyle(true));
 }
 
+/**
+ * @brief Creates the grid view layout for rooms.
+ *
+ * Displays rooms as interactive cards.
+ */
 QWidget* HomePage::createGridView() {
     QScrollArea* scroll = new QScrollArea();
     scroll->setWidgetResizable(true);
@@ -113,6 +141,11 @@ QWidget* HomePage::createGridView() {
     return scroll;
 }
 
+/**
+ * @brief Creates the list view layout for rooms.
+ *
+ * Displays rooms in a vertical list format.
+ */
 QWidget* HomePage::createListView() {
     QScrollArea* scroll = new QScrollArea();
     scroll->setWidgetResizable(true);
@@ -132,6 +165,12 @@ QWidget* HomePage::createListView() {
     return scroll;
 }
 
+/**
+ * @brief Creates a clickable room card.
+ *
+ * @param name Room name
+ * @param status Current room status
+ */
 QWidget* HomePage::createRoomCard(QString name, QString status) {
     QFrame* card = new QFrame();
     card->setObjectName("RoomCard");
@@ -159,6 +198,12 @@ QWidget* HomePage::createRoomCard(QString name, QString status) {
     return card;
 }
 
+/**
+ * @brief Creates a row entry for a room in list view.
+ *
+ * @param name Room name
+ * @param status Current room status
+ */
 QWidget* HomePage::createRoomRow(QString name, QString status) {
     QWidget* row = new QWidget();
     row->setStyleSheet("background: #1E222A; border-radius: 8px; border: 1px solid #2C313C;");

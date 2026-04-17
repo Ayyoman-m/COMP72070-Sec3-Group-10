@@ -20,6 +20,9 @@
 #include "pages/ProfilePage.h"
 #include "pages/SettingsPage.h"
 
+/**
+ * @brief Constructs the SmartHomeClient and initializes UI and networking.
+ */
 SmartHomeClient::SmartHomeClient(QWidget* parent)
     : QMainWindow(parent),
     isSidebarCollapsed(false),
@@ -40,11 +43,17 @@ SmartHomeClient::SmartHomeClient(QWidget* parent)
     this->setStyleSheet(StyleManager::getMainWindowStyle());
 }
 
+/**
+ * @brief Cleans up resources and closes network connection.
+ */
 SmartHomeClient::~SmartHomeClient() {
     if (clientSocket != INVALID_SOCKET) closesocket(clientSocket);
     WSACleanup();
 }
 
+/**
+ * @brief Sets up the main UI including login and dashboard.
+ */
 void SmartHomeClient::setupUi() {
     this->setWindowTitle("SmartHome Pro v2.0");
     this->resize(1200, 800);
@@ -103,6 +112,12 @@ void SmartHomeClient::setupUi() {
     centralStack->setCurrentWidget(loginWidget);
 }
 
+/**
+ * @brief Creates and configures the sidebar navigation.
+ *
+ * Initializes buttons for navigation between dashboard pages
+ * such as Home, Map, Profile, and Settings.
+ */
 void SmartHomeClient::setupSidebar() {
     sidebar = new QWidget();
     sidebar->setObjectName("Sidebar");
@@ -134,6 +149,12 @@ void SmartHomeClient::setupSidebar() {
     QObject::connect(btnLogout, &QPushButton::clicked, this, &SmartHomeClient::logout);
 }
 
+/**
+ * @brief Initializes and connects all application pages.
+ *
+ * Sets up page navigation, signals, and interactions between
+ * UI components such as HomePage and RoomDetailPage.
+ */
 void SmartHomeClient::setupPages() {
     pageStack = new QStackedWidget();
 
@@ -173,6 +194,14 @@ void SmartHomeClient::setupPages() {
         });
 }
 
+/**
+ * @brief Displays a temporary notification message.
+ *
+ * Shows a styled popup message at the bottom of the window.
+ *
+ * @param message Message to display
+ * @param isError Indicates if the message is an error
+ */
 void SmartHomeClient::showToast(const QString& message, bool isError) {
     QLabel* toast = new QLabel(message, this);
     toast->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
@@ -194,7 +223,14 @@ void SmartHomeClient::showToast(const QString& message, bool isError) {
     QTimer::singleShot(2500, toast, &QLabel::deleteLater);
 }
 
-// REQ-SVR-070: High-Res Image Transfer (Fixed for Reliable Reception)
+/**
+ * @brief Requests a security camera image from the server.
+ *
+ * Sends a request packet to the server and receives an image
+ * stream using reliable socket communication.
+ *
+ * Implements REQ-SVR-070 (image transfer requirement).
+ */
 void SmartHomeClient::requestSecurityImage() {
     if (clientSocket == INVALID_SOCKET) {
         showToast("Error: No Connection", true);
@@ -252,6 +288,13 @@ void SmartHomeClient::requestSecurityImage() {
     }
 }
 
+/**
+ * @brief Establishes a TCP connection to the server.
+ *
+ * @param ip Server IP address
+ * @param port Server port number
+ * @return true if connection succeeds, false otherwise
+ */
 bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
     if (clientSocket != INVALID_SOCKET) closesocket(clientSocket);
     clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -270,6 +313,12 @@ bool SmartHomeClient::connectToServer(const std::string& ip, int port) {
     return true;
 }
 
+/**
+ * @brief Handles user login authentication.
+ *
+ * Verifies user credentials and navigates to the dashboard
+ * if authentication is successful.
+ */
 void SmartHomeClient::attemptLogin() {
     if (!connectToServer(serverIp, serverPort)) {
         loginStatusLabel->setText("SYSTEM ERROR: Server Offline");
@@ -299,6 +348,11 @@ void SmartHomeClient::attemptLogin() {
     }
 }
 
+/**
+ * @brief Sends a mode change request to the server.
+ *
+ * @param modeIndex Selected system mode
+ */
 void SmartHomeClient::handleModeChange(int modeIndex) {
     if (clientSocket != INVALID_SOCKET) {
         NetworkPacket p(4, std::to_string(modeIndex));
@@ -309,6 +363,9 @@ void SmartHomeClient::handleModeChange(int modeIndex) {
     showToast("Mode Request: " + modes[modeIndex]);
 }
 
+/**
+ * @brief Logs out the current user and resets session.
+ */
 void SmartHomeClient::logout() {
     if (clientSocket != INVALID_SOCKET) {
         closesocket(clientSocket);
@@ -319,6 +376,13 @@ void SmartHomeClient::logout() {
     showToast("Logged Out Safely");
 }
 
+/**
+ * @brief Registers a new user locally.
+ *
+ * @param user Username
+ * @param pass Password
+ * @param email Email address
+ */
 void SmartHomeClient::handleNewRegistration(QString user, QString pass, QString email) {
     localUserDb.push_back({ user, pass, email });
     centralStack->setCurrentWidget(loginWidget);
@@ -326,21 +390,37 @@ void SmartHomeClient::handleNewRegistration(QString user, QString pass, QString 
     loginStatusLabel->setStyleSheet("color: #98C379;");
 }
 
+/**
+ * @brief Displays the sign-up page.
+ */
 void SmartHomeClient::showSignUpPage() {
     centralStack->setCurrentWidget(signUpPage);
 }
 
+/**
+ * @brief Loads and displays selected room details.
+ *
+ * @param roomName Name of the selected room
+ */
 void SmartHomeClient::onRoomSelected(const QString& roomName) {
     roomDetailPage->loadRoom(roomName);
     pageStack->setCurrentWidget(roomDetailPage);
 }
 
+/**
+ * @brief Handles device selection and routes to corresponding room.
+ *
+ * @param deviceId Selected device ID
+ */
 void SmartHomeClient::onDeviceSelected(const QString& deviceId) {
     if (deviceId.contains("LR")) onRoomSelected("Living Room");
     else if (deviceId.contains("KITCHEN")) onRoomSelected("Kitchen");
     else onRoomSelected("Living Room");
 }
 
+/**
+ * @brief Toggles sidebar visibility.
+ */
 void SmartHomeClient::toggleSidebar() {
     isSidebarCollapsed = !isSidebarCollapsed;
     sidebar->setFixedWidth(isSidebarCollapsed ? 60 : 200);

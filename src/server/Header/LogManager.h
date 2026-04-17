@@ -1,9 +1,20 @@
 #pragma once
 #include <string>
 
-// this class writes logs to file
+/**
+ * @class LogManager
+ * @brief Handles logging of system events.
+ *
+ * Writes system events and messages to a log file
+ * for monitoring and debugging purposes.
+ */
 class LogManager {
 public:
-    // writes one log line
+
+    /**
+     * @brief Logs an event message.
+     *
+     * @param message Event description to log
+     */
     void logEvent(const std::string& message);
 };

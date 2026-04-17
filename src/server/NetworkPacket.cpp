@@ -1,6 +1,11 @@
 #include "NetworkPacket.h"
 #include <cstring>
 
+/**
+ * @brief Default constructor for NetworkPacket.
+ *
+ * Initializes packet with default values and computes checksum.
+ */
 NetworkPacket::NetworkPacket()
     : magicNumber(0x7E), version(1), commandId(0), statusCode(0), payloadLength(0), checksum(0) {
     checksum = calculateChecksum();
@@ -18,16 +23,37 @@ NetworkPacket::NetworkPacket(uint16_t cmd, const std::string& payloadStr)
     setPayload(payloadStr.c_str(), static_cast<uint32_t>(payloadStr.length()));
 }
 
+/**
+ * @brief Constructs a packet with command and status.
+ *
+ * @param cmd Command ID
+ * @param status Status code
+ */
 void NetworkPacket::setCommandId(uint16_t cmd) {
     commandId = cmd;
     checksum = calculateChecksum();
 }
 
+
+/**
+ * @brief Constructs a packet with command and string payload.
+ *
+ * @param cmd Command ID
+ * @param payloadStr Payload data as string
+ */
 void NetworkPacket::setStatusCode(uint16_t status) {
     statusCode = status;
     checksum = calculateChecksum();
 }
 
+/**
+ * @brief Sets packet payload data.
+ *
+ * Updates payload and recalculates checksum.
+ *
+ * @param data Pointer to payload data
+ * @param length Length of payload
+ */
 void NetworkPacket::setPayload(const char* data, uint32_t length) {
     if (data && length > 0) {
         payload.assign(data, data + length);
@@ -40,6 +66,13 @@ void NetworkPacket::setPayload(const char* data, uint32_t length) {
     checksum = calculateChecksum();
 }
 
+/**
+ * @brief Calculates checksum for packet integrity.
+ *
+ * Combines header fields and payload bytes to generate checksum.
+ *
+ * @return Computed checksum value
+ */
 uint16_t NetworkPacket::calculateChecksum() const {
     // Using uint32_t for internal math to prevent overflow before the modulo
     uint32_t sum = magicNumber + version + commandId + statusCode + payloadLength;
@@ -49,10 +82,25 @@ uint16_t NetworkPacket::calculateChecksum() const {
     return static_cast<uint16_t>(sum % 65536);
 }
 
+/**
+ * @brief Validates packet integrity.
+ *
+ * Checks magic number, version, and checksum.
+ *
+ * @return true if packet is valid, false otherwise
+ */
 bool NetworkPacket::isValid() const {
     return (magicNumber == 0x7E && version == 1 && checksum == calculateChecksum());
 }
 
+/**
+ * @brief Serializes packet into binary format.
+ *
+ * Converts packet fields into a byte buffer for transmission.
+ *
+ * @param outSize Output size of serialized data
+ * @return Pointer to allocated buffer (must be freed by caller)
+ */
 char* NetworkPacket::serialize(uint32_t& outSize) const {
     outSize = 10 + payloadLength + 2; // Header(10) + Body + Checksum(2)
     char* buffer = new char[outSize];
@@ -73,6 +121,15 @@ char* NetworkPacket::serialize(uint32_t& outSize) const {
     return buffer;
 }
 
+/**
+ * @brief Deserializes binary data into packet.
+ *
+ * Parses raw buffer, reconstructs packet fields, and validates checksum.
+ *
+ * @param data Input buffer
+ * @param size Buffer size
+ * @return true if successful, false otherwise
+ */
 bool NetworkPacket::deserialize(const char* data, uint32_t size) {
     if (!data || size < 12) return false;
 

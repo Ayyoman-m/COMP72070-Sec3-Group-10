@@ -3,9 +3,14 @@
 #include <cstring>
 
 /**
- * Reliable transmission of raw data over a TCP socket.
- * TCP may fragment data; this loop ensures we don't return until every
- * single byte requested has been successfully sent.
+ * @brief Sends all bytes over a TCP socket.
+ *
+ * Ensures complete transmission even if data is fragmented.
+ *
+ * @param clientSocket Socket used for communication
+ * @param data Data buffer to send
+ * @param size Number of bytes to send
+ * @return true if successful, false otherwise
  */
 bool NetworkManager::sendAll(SOCKET clientSocket, const char* data, int size)
 {
@@ -13,10 +18,8 @@ bool NetworkManager::sendAll(SOCKET clientSocket, const char* data, int size)
 
     while (totalSent < size)
     {
-        // Attempt to send the remaining slice of the buffer
         int bytesSent = send(clientSocket, data + totalSent, size - totalSent, 0);
 
-        // A return of 0 or SOCKET_ERROR indicates a lost connection
         if (bytesSent <= 0)
         {
             return false;
@@ -29,9 +32,14 @@ bool NetworkManager::sendAll(SOCKET clientSocket, const char* data, int size)
 }
 
 /**
- * Reliable reception of raw data from a TCP socket.
- * This blocks until the specific 'size' of data requested is fully received,
- * preventing us from processing incomplete headers or payloads.
+ * @brief Receives all bytes from a TCP socket.
+ *
+ * Blocks until the requested amount of data is fully received.
+ *
+ * @param clientSocket Socket used for communication
+ * @param buffer Buffer to store received data
+ * @param size Number of bytes to receive
+ * @return true if successful, false otherwise
  */
 bool NetworkManager::recvAll(SOCKET clientSocket, char* buffer, int size)
 {
@@ -39,7 +47,6 @@ bool NetworkManager::recvAll(SOCKET clientSocket, char* buffer, int size)
 
     while (totalReceived < size)
     {
-        // Wait for the next chunk of the data stream
         int bytesReceived = recv(clientSocket, buffer + totalReceived, size - totalReceived, 0);
 
         if (bytesReceived <= 0)
@@ -54,74 +61,69 @@ bool NetworkManager::recvAll(SOCKET clientSocket, char* buffer, int size)
 }
 
 /**
- * High-level helper to transmit a NetworkPacket object.
- * Uses uint32_t to match the NetworkPacket class exactly.
+ * @brief Sends a serialized network packet.
+ *
+ * Converts the packet into binary format and transmits it.
+ *
+ * @param clientSocket Socket used for communication
+ * @param packet Packet to send
+ * @return true if successful, false otherwise
  */
 bool NetworkManager::sendPacket(SOCKET clientSocket, const NetworkPacket& packet)
 {
     uint32_t packetSize = 0;
 
-    // Convert the object into its binary wire format
     char* buffer = packet.serialize(packetSize);
 
-    // Transmit the complete serialized blob
     bool success = sendAll(clientSocket, buffer, (int)packetSize);
 
-    // Always free the temporary buffer allocated by serialize() to avoid leaks
     delete[] buffer;
     return success;
 }
 
 /**
- * High-level helper to reconstruct a NetworkPacket from the wire.
- * This reads the fixed 10-byte header first to determine the payload size.
+ * @brief Receives and reconstructs a network packet.
+ *
+ * Reads header, determines payload size, and reconstructs the packet.
+ *
+ * @param clientSocket Socket used for communication
+ * @param packet Packet object to populate
+ * @return true if successful, false otherwise
  */
 bool NetworkManager::receivePacket(SOCKET clientSocket, NetworkPacket& packet)
 {
-    // Our protocol constants as defined in the binary specification
     const int HEADER_SIZE = 10;
     const int TAIL_SIZE = 2;
 
     char headerBuffer[HEADER_SIZE];
 
-    // 1. Receive the fixed-size header first to inspect the payload length
     if (!recvAll(clientSocket, headerBuffer, HEADER_SIZE))
     {
         return false;
     }
 
-    // 2. Extract payload length from the header (located at offset 6)
     uint32_t payloadLength = 0;
     memcpy(&payloadLength, headerBuffer + 6, sizeof(payloadLength));
 
-    // 3. Calculate full expected size: Header (10) + Body (N) + Checksum (2)
     uint32_t remainingSize = payloadLength + TAIL_SIZE;
     uint32_t fullPacketSize = HEADER_SIZE + remainingSize;
 
-    // --- SECURITY & ANALYSIS GUARD ---
-    // Max size set to 2MB to accommodate the 1.045MB snapshot images.
     if (fullPacketSize < (HEADER_SIZE + TAIL_SIZE) || fullPacketSize > 2000000)
     {
         return false;
     }
 
-    // 4. Allocate and initialize the buffer for the complete packet
     char* fullBuffer = new char[fullPacketSize];
-
-    // Explicit initialization satisfies static analyzers and prevents memory leaks
     memset(fullBuffer, 0, fullPacketSize);
 
-    // Copy the header we already have into the beginning of the buffer
     memcpy(fullBuffer, headerBuffer, HEADER_SIZE);
 
-    // 5. Receive the remaining parts (Payload + Checksum) directly into the buffer
     if (!recvAll(clientSocket, fullBuffer + HEADER_SIZE, (int)remainingSize))
     {
         delete[] fullBuffer;
         return false;
     }
 
-    // 6. Reconstruct the NetworkPacket object and verify the checksum internally
     bool success = packet.deserialize(fullBuffer, fullPacketSize);
 
     delete[] fullBuffer;

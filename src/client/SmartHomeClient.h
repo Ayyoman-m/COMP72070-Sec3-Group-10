@@ -18,45 +18,121 @@
 #include "pages/RoomDetailPage.h"
 #include "pages/SignUpPage.h"
 
+/**
+ * @class SmartHomeClient
+ * @brief Main client application window for the Smart Home system.
+ *
+ * This class manages the graphical user interface, user authentication,
+ * navigation between pages, and communication with the server.
+ * It acts as the central controller for the client-side application.
+ */
 class SmartHomeClient : public QMainWindow {
     Q_OBJECT
     friend struct SmartHomeClientTestAccessor;
 
 public:
+    /**
+     * @struct UserAccount
+     * @brief Stores user account information for authentication.
+     */
     struct UserAccount {
         QString username;
         QString password;
         QString email;
     };
 
+    /**
+     * @brief Constructs the Smart Home Client window.
+     * @param parent Parent widget
+     */
     explicit SmartHomeClient(QWidget* parent = nullptr);
+
+    /**
+    * @brief Destructor for SmartHomeClient.
+    */
     ~SmartHomeClient();
 
 private slots:
-    // Authentication & Navigation
+
+    /**
+     * @brief Attempts to log in the user.
+     */
     void attemptLogin();
+
+    /**
+     * @brief Displays the sign-up page.
+     */
     void showSignUpPage();
+
+    /**
+    * @brief Handles new user registration.
+    * @param user Username
+    * @param pass Password
+    * @param email Email address
+    */
     void handleNewRegistration(QString user, QString pass, QString email);
 
-    // Page Routing
+    /**
+    * @brief Triggered when a room is selected.
+    * @param roomName Name of the selected room
+    */
     void onRoomSelected(const QString& roomName);
+
+    /**
+   * @brief Triggered when a device is selected.
+   * @param deviceId ID of the selected device
+   */
     void onDeviceSelected(const QString& deviceId);
+
+    /**
+     * @brief Toggles the sidebar visibility.
+     */
+
     void toggleSidebar();
 
-    // Mode & Session Management
+    /**
+     * @brief Handles system mode changes.
+     * @param modeIndex Index of selected mode
+     */
     void handleModeChange(int modeIndex);
     void logout();
+    /**
+    * @brief Requests a security image from the server.
+    *
+    * Implements REQ-SVR-070 for image transfer.
+    */
 
-    // REQ-SVR-070: Image Request Slot
     void requestSecurityImage();
 
 private:
+    /**
+     * @brief Initializes the UI components.
+     */
     void setupUi();
+
+    /**
+    * @brief Sets up the sidebar layout and buttons.
+    */
     void setupSidebar();
+
+    /**
+     * @brief Initializes application pages.
+     */
     void setupPages();
+
+    /**
+     * @brief Displays a temporary notification message.
+     * @param message Text to display
+     * @param isError Indicates if message is an error
+     */
     void showToast(const QString& message, bool isError = false);
 
-    // Networking Core
+    /**
+     * @brief Connects the client to the server.
+     * @param ip Server IP address
+     * @param port Server port number
+     * @return true if connection is successful, false otherwise
+     */
     bool connectToServer(const std::string& ip, int port);
 
     bool isSidebarCollapsed;

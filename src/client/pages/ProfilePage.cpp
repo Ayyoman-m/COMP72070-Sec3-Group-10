@@ -3,10 +3,20 @@
 #include <QHBoxLayout>
 #include <QDateTime>
 
+/**
+ * @brief Constructs the ProfilePage.
+ *
+ * Initializes the user profile UI layout and displays account details.
+ */
 ProfilePage::ProfilePage(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Sets up the profile page UI.
+ *
+ * Creates header section and displays user account information.
+ */
 void ProfilePage::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(50, 50, 50, 50);
@@ -25,7 +35,7 @@ void ProfilePage::setupUi() {
         "color: #61AFEF; "
         "font-size: 40px;"
     );
-    avatarPlaceholder->setText("A"); // Default for Admin
+    avatarPlaceholder->setText("A");
     avatarPlaceholder->setAlignment(Qt::AlignCenter);
 
     QVBoxLayout* titleLayout = new QVBoxLayout();
@@ -46,7 +56,6 @@ void ProfilePage::setupUi() {
 
     mainLayout->addLayout(headerLayout);
 
-    // 2. Account Details Section
     QLabel* sectionTitle = new QLabel("ACCOUNT INFORMATION");
     sectionTitle->setStyleSheet("color: #56B6C2; font-weight: bold; letter-spacing: 2px;");
     mainLayout->addWidget(sectionTitle);
@@ -56,9 +65,15 @@ void ProfilePage::setupUi() {
     mainLayout->addWidget(createInfoRow("Access Level", "Root / Level 4"));
     mainLayout->addWidget(createInfoRow("Last Login", QDateTime::currentDateTime().toString("MMM dd, yyyy - hh:mm")));
 
-    mainLayout->addStretch(); // Push everything to the top
+    mainLayout->addStretch();
 }
-
+/**
+ * @brief Creates a row displaying user information.
+ *
+ * @param label Field name (e.g., Email)
+ * @param value Field value
+ * @return QWidget pointer to the created row
+ */
 QWidget* ProfilePage::createInfoRow(QString label, QString value) {
     QWidget* row = new QWidget();
     QHBoxLayout* layout = new QHBoxLayout(row);
@@ -74,7 +89,6 @@ QWidget* ProfilePage::createInfoRow(QString label, QString value) {
     layout->addWidget(lblValue);
     layout->addStretch();
 
-    // Add a subtle bottom border to the row
     row->setStyleSheet("border-bottom: 1px solid #2C313C;");
 
     return row;

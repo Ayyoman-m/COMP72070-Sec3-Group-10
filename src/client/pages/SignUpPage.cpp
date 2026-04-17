@@ -1,10 +1,21 @@
 #include "SignUpPage.h"
 #include "../StyleManager.h"
 
+/**
+ * @brief Constructs the SignUpPage.
+ *
+ * Initializes the user registration interface.
+ */
 SignUpPage::SignUpPage(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Sets up the sign-up UI layout.
+ *
+ * Creates input fields for username, email, password,
+ * and connects buttons for registration and navigation.
+ */
 void SignUpPage::setupUi() {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(350, 100, 350, 100);
@@ -56,8 +67,13 @@ void SignUpPage::setupUi() {
     connect(btnBack, &QPushButton::clicked, this, &SignUpPage::backToLoginRequested);
 }
 
+/**
+ * @brief Handles user registration logic.
+ *
+ * Validates input fields and emits registration signal
+ * if data is valid.
+ */
 void SignUpPage::onRegisterClicked() {
-    // Basic Validation
     if (userEdit->text().isEmpty() || passEdit->text().isEmpty()) {
         statusLabel->setText("Username and Password are required.");
         statusLabel->setStyleSheet("color: #E06C75;");
@@ -70,7 +86,6 @@ void SignUpPage::onRegisterClicked() {
         return;
     }
 
-    // Success! Emit signal to let the Main Client handle storage
     emit registrationRequested(userEdit->text(), passEdit->text(), emailEdit->text());
 
     statusLabel->setText("Account Created! You can now log in.");

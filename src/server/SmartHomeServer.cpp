@@ -7,13 +7,22 @@
 #include <QVBoxLayout>
 #include <fstream> 
 
-// REQ-SVR-030: Operational State Machine
+/**
+ * @brief Constructs the SmartHomeServer UI and initializes state.
+ *
+ * Sets initial server state and prepares UI components.
+ */
 enum SystemState { LOCKED = 0, HOME = 1, AWAY = 2, MAINTENANCE = 3 };
 SystemState currentState = HOME;
 
 SmartHomeServer::SmartHomeServer(QWidget* parent)
     : QMainWindow(parent), isRunning(false), serverSocket(INVALID_SOCKET), listenerThread(nullptr)
 {
+    /**
+ * @brief Sets up the server UI.
+ *
+ * Creates status display, start/stop controls, and log console.
+ */
     setupUi();
     logMessage("Server Initialized. System State: [HOME]");
 }
@@ -47,7 +56,13 @@ void SmartHomeServer::setupUi() {
     this->setCentralWidget(centralWidget);
 }
 
-// REQ-SVR-080: Mandatory Transaction Logging to File
+/**
+ * @brief Logs network transactions to file.
+ *
+ * Records command ID and data size for monitoring.
+ *
+ * Implements REQ-SVR-080 (logging requirement).
+ */
 void logTransaction(const QString& type, int cmd, size_t bytes) {
     std::ofstream logFile("server_log.txt", std::ios::app);
     if (logFile.is_open()) {
@@ -57,6 +72,11 @@ void logTransaction(const QString& type, int cmd, size_t bytes) {
     }
 }
 
+/**
+ * @brief Starts or stops the server.
+ *
+ * Initializes socket, binds to port, and starts listener thread.
+ */
 void SmartHomeServer::toggleServer() {
     if (!isRunning) {
         WSADATA wsaData;
@@ -94,6 +114,11 @@ void SmartHomeServer::toggleServer() {
     }
 }
 
+/**
+ * @brief Listens for incoming client connections.
+ *
+ * Accepts connections and continuously receives packets.
+ */
 void SmartHomeServer::startListening() {
     while (isRunning) {
         sockaddr_in cAddr;
@@ -118,6 +143,15 @@ void SmartHomeServer::startListening() {
     }
 }
 
+/**
+ * @brief Processes incoming network packets.
+ *
+ * Handles system mode updates and image transfer requests.
+ *
+ * Implements:
+ * - REQ-SVR-040 (state machine update)
+ * - REQ-SVR-070 (image transfer)
+ */
 void SmartHomeServer::processPacket(const NetworkPacket& packet, SOCKET clientSocket) {
     uint16_t cmd = packet.getCommandId();
     std::string payload(packet.getPayload(), packet.getPayloadLength());
@@ -173,6 +207,11 @@ void SmartHomeServer::processPacket(const NetworkPacket& packet, SOCKET clientSo
         });
 }
 
+/**
+ * @brief Stops server networking.
+ *
+ * Closes sockets and cleans up Winsock resources.
+ */
 void SmartHomeServer::stopNetworking() {
     isRunning = false;
     if (serverSocket != INVALID_SOCKET) {
@@ -182,6 +221,11 @@ void SmartHomeServer::stopNetworking() {
     WSACleanup();
 }
 
+/**
+ * @brief Logs messages to UI console.
+ *
+ * Displays timestamped messages in the server interface.
+ */
 void SmartHomeServer::logMessage(const QString& msg) {
     QString ts = QDateTime::currentDateTime().toString("HH:mm:ss");
     logConsole->append(QString("[%1] %2").arg(ts).arg(msg));

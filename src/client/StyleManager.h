@@ -1,6 +1,14 @@
 #pragma once
 #include <QString>
 
+
+/**
+ * @namespace StyleManager
+ * @brief Provides centralized styling for the Smart Home Client UI.
+ *
+ * This namespace defines color constants and reusable Qt stylesheet
+ * functions for consistent UI design across the application.
+ */
 namespace StyleManager {
 
     // --- COLOR PALETTE ---
@@ -14,12 +22,16 @@ namespace StyleManager {
     const QString COLOR_TEXT_MAIN = "#ABB2BF";
     const QString COLOR_BORDER = "#2C313C";
 
-    // --- MAIN WINDOW ---
+    /**
+     * @brief Returns stylesheet for the main application window.
+     */
     inline QString getMainWindowStyle() {
         return QString("QMainWindow { background-color: %1; }").arg(COLOR_BG_DEEP);
     }
 
-    // --- STATUS BAR ---
+    /**
+     * @brief Returns stylesheet for the status bar.
+     */
     inline QString getStatusBarStyle() {
         return QString(
             "QWidget#StatusBar { "
@@ -31,7 +43,11 @@ namespace StyleManager {
         ).arg(COLOR_BORDER, COLOR_TEXT_MAIN);
     }
 
-    // --- SEGMENTED TOGGLE ---
+    /**
+     * @brief Returns stylesheet for toggle buttons.
+     *
+     * @param active Indicates if the button is active
+     */
     inline QString getToggleButtonStyle(bool active) {
         if (active) {
             return QString(
@@ -55,7 +71,9 @@ namespace StyleManager {
         }
     }
 
-    // --- ROOM CARDS (The one causing the error!) ---
+    /**
+     * @brief Returns stylesheet for room cards.
+     */
     inline QString getRoomCardStyle() {
         return QString(
             "QFrame#RoomCard { "
@@ -70,7 +88,9 @@ namespace StyleManager {
         ).arg(COLOR_BG_CARD, COLOR_BORDER, COLOR_ACCENT_BLUE);
     }
 
-    // --- DEVICE CONTROL CARDS ---
+    /**
+     * @brief Returns stylesheet for device control cards.
+     */
     inline QString getDeviceControlStyle() {
         return QString(
             "QFrame#DeviceCard { "
@@ -83,7 +103,9 @@ namespace StyleManager {
         ).arg(COLOR_BORDER, COLOR_ACCENT_GREEN);
     }
 
-    // --- SIDEBAR ---
+    /**
+    * @brief Returns stylesheet for the sidebar.
+    */
     inline QString getSidebarStyle() {
         return QString(
             "QWidget#Sidebar { background-color: %1; border-right: 1px solid %2; }"
@@ -92,7 +114,9 @@ namespace StyleManager {
         ).arg(COLOR_BG_SIDEBAR, COLOR_BORDER, COLOR_TEXT_MAIN, COLOR_ACCENT_BLUE);
     }
 
-    // --- INPUT FIELDS ---
+    /**
+     * @brief Returns stylesheet for login input fields.
+     */
     inline QString getLoginInputStyle() {
         return QString(
             "QLineEdit { "

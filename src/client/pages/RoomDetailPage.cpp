@@ -3,10 +3,20 @@
 #include <QHBoxLayout>
 #include <QStyle>
 
+/**
+ * @brief Constructs the RoomDetailPage.
+ *
+ * Initializes UI layout for displaying room devices and status.
+ */
 RoomDetailPage::RoomDetailPage(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Sets up the room detail UI layout.
+ *
+ * Creates the status bar and device display area.
+ */
 void RoomDetailPage::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -51,11 +61,20 @@ void RoomDetailPage::setupUi() {
     mainLayout->addWidget(scroll);
 }
 
+/**
+ * @brief Loads and displays devices for a selected room.
+ *
+ * Dynamically updates UI components based on room type,
+ * including lighting, climate controls, and security features.
+ *
+ * Implements REQ-SVR-070 for security-enabled rooms.
+ *
+ * @param roomName Name of the selected room
+ */
 void RoomDetailPage::loadRoom(const QString& roomName) {
     roomTitleLabel->setText(roomName.toUpper());
     clearLayout(deviceContainer);
 
-    // Common check for security-enabled rooms (REQ-SVR-070)
     bool hasSecurity = (roomName == "Garage" || roomName == "Backyard");
 
     if (roomName == "Living Room") {
@@ -81,12 +100,12 @@ void RoomDetailPage::loadRoom(const QString& roomName) {
     else if (roomName == "Garage") {
         updateStatusBar("15.0°C", "OFF");
         deviceContainer->insertWidget(0, createDeviceSwitch("Main Roller Door", false));
-        setupCameraView(deviceContainer); // REQ-SVR-070 integration
+        setupCameraView(deviceContainer); 
     }
     else if (roomName == "Backyard") {
         updateStatusBar("18.0°C", "DUSK");
         deviceContainer->insertWidget(0, createDeviceSwitch("Flood Lights", false));
-        setupCameraView(deviceContainer); // REQ-SVR-070 integration
+        setupCameraView(deviceContainer); 
     }
     else {
         // Default catch-all for other rooms
@@ -97,6 +116,13 @@ void RoomDetailPage::loadRoom(const QString& roomName) {
     deviceContainer->addStretch();
 }
 
+/**
+ * @brief Sets up the security camera view UI.
+ *
+ * Adds camera display and request button for high-resolution images.
+ *
+ * @param layout Layout to insert camera components into
+ */
 void RoomDetailPage::setupCameraView(QVBoxLayout* layout) {
     QLabel* camTitle = new QLabel("LIVE SECURITY FEED (1MB SNAPSHOT)");
     camTitle->setStyleSheet("color: #56B6C2; font-weight: bold; margin-top: 20px;");
@@ -117,7 +143,13 @@ void RoomDetailPage::setupCameraView(QVBoxLayout* layout) {
     layout->addWidget(btnRequestImage);
 }
 
-// REQ-SVR-070: Updates the "Monitor" with the 1MB received image
+/**
+ * @brief Updates camera display with received image.
+ *
+ * Displays the image received from the server in the UI.
+ *
+ * Implements REQ-SVR-070 (image transfer).
+ */
 void RoomDetailPage::updateCameraDisplay(const QPixmap& pix) {
     if (cameraMonitor) {
         cameraMonitor->setPixmap(pix.scaled(cameraMonitor->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -125,6 +157,13 @@ void RoomDetailPage::updateCameraDisplay(const QPixmap& pix) {
     }
 }
 
+/**
+ * @brief Creates a toggle switch for a device.
+ *
+ * @param name Device name
+ * @param isOn Initial state
+ * @return QWidget pointer to the created switch
+ */
 QWidget* RoomDetailPage::createDeviceSwitch(QString name, bool isOn) {
     QFrame* card = new QFrame();
     card->setObjectName("DeviceCard");
@@ -153,6 +192,14 @@ QWidget* RoomDetailPage::createDeviceSwitch(QString name, bool isOn) {
     return card;
 }
 
+/**
+ * @brief Creates a slider control for a device.
+ *
+ * @param name Device name
+ * @param initialValue Starting value
+ * @param unit Unit of measurement
+ * @return QWidget pointer to the created slider
+ */
 QWidget* RoomDetailPage::createDeviceSlider(QString name, int initialValue, QString unit) {
     QFrame* card = new QFrame();
     card->setObjectName("DeviceCard");
@@ -182,11 +229,22 @@ QWidget* RoomDetailPage::createDeviceSlider(QString name, int initialValue, QStr
     return card;
 }
 
+/**
+ * @brief Updates room status display.
+ *
+ * @param temp Temperature value
+ * @param lightStatus Light status text
+ */
 void RoomDetailPage::updateStatusBar(const QString& temp, const QString& lightStatus) {
     roomTempLabel->setText("TEMP: " + temp);
     roomLightStatusLabel->setText("LIGHTS: " + lightStatus);
 }
 
+/**
+ * @brief Clears all widgets from a layout.
+ *
+ * @param layout Layout to clear
+ */
 void RoomDetailPage::clearLayout(QLayout* layout) {
     if (!layout) return;
     while (QLayoutItem* item = layout->takeAt(0)) {

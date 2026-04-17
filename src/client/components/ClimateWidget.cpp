@@ -1,5 +1,11 @@
 #include "ClimateWidget.h"
 
+/**
+ * @brief Constructs the ClimateWidget and initializes UI components.
+ *
+ * Sets up layout, temperature display, slider, and mode selector.
+ * Default mode is OFF with a target temperature of 22.0°C.
+ */
 ClimateWidget::ClimateWidget(QWidget* parent)
     : QWidget(parent), targetTemp(22.0f), currentMode("OFF")
 {
@@ -46,6 +52,13 @@ ClimateWidget::ClimateWidget(QWidget* parent)
     );
 }
 
+/**
+ * @brief Handles mode selection changes.
+ *
+ * Enables or disables the slider depending on mode and updates UI.
+ *
+ * @param index Selected mode index
+ */
 void ClimateWidget::onModeSelected(int index) {
     currentMode = modeSelector->itemText(index);
 
@@ -61,6 +74,13 @@ void ClimateWidget::onModeSelected(int index) {
     emit modeChanged(currentMode);
 }
 
+/**
+ * @brief Handles temperature slider movement.
+ *
+ * Applies constraints based on selected mode and updates the target temperature.
+ *
+ * @param value Slider value
+ */
 void ClimateWidget::onSliderMoved(int value) {
     float newTemp = value / 10.0f;
 
@@ -79,6 +99,11 @@ void ClimateWidget::onSliderMoved(int value) {
     emit targetTempChanged(targetTemp);
 }
 
+/**
+ * @brief Updates UI elements based on current mode and temperature.
+ *
+ * Changes display text and styling dynamically depending on system state.
+ */
 void ClimateWidget::updateUI() {
     tempDisplay->setText(QString::number(targetTemp, 'f', 1) + "°C");
 

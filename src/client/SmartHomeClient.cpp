@@ -38,6 +38,7 @@ SmartHomeClient::SmartHomeClient(QWidget* parent)
     setupUi();
 
     QSettings settings("SmartHomeProject", "ClientApp");
+    settings.sync(); // Ensure persisted values are loaded before reading.
     userEdit->setText(settings.value("lastUser", "").toString());
 
     this->setStyleSheet(StyleManager::getMainWindowStyle());
@@ -339,6 +340,7 @@ void SmartHomeClient::attemptLogin() {
     if (found) {
         QSettings settings("SmartHomeProject", "ClientApp");
         settings.setValue("lastUser", inputUser);
+        settings.sync(); // Ensure the value is persisted for subsequent launches/tests.
         centralStack->setCurrentWidget(dashboardWidget);
         showToast("Welcome back, " + inputUser);
     }

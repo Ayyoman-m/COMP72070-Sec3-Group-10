@@ -39,3 +39,23 @@ target_link_libraries(ServerApp PRIVATE
     server_lib
     Qt6::Widgets
 )
+
+# Comprehensive Qt DLL Copy for Debug Environment
+if(WIN32)
+    file(COPY 
+        "C:/Qt/6.11.0/msvc2022_64/bin/Qt6Cored.dll"
+        "C:/Qt/6.11.0/msvc2022_64/bin/Qt6Networkd.dll"
+        "C:/Qt/6.11.0/msvc2022_64/bin/Qt6Widgetsd.dll"
+        "C:/Qt/6.11.0/msvc2022_64/bin/Qt6Guid.dll"
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+    )
+endif()
+
+# Automatically copy the Windows platform plugin
+if(WIN32)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/platforms")
+    file(COPY 
+        "C:/Qt/6.11.0/msvc2022_64/plugins/platforms/qwindowsd.dll"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/platforms"
+    )
+endif()

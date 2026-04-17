@@ -1,3 +1,8 @@
+
+# If the user has QTDIR set, make sure CMake can find Qt without hardcoded paths.
+if(DEFINED ENV{QTDIR})
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{QTDIR}")
+endif()
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 # Packet tests
@@ -177,6 +182,7 @@ add_executable(Test_Server
 )
 
 target_link_libraries(Test_Server PRIVATE server_lib)
+target_link_libraries(Test_Server PRIVATE ws2_32)
 target_link_options(Test_Server PRIVATE /PROFILE)
 
 target_include_directories(Test_Server PRIVATE
@@ -217,3 +223,26 @@ add_named_case(Test_Server maintenance_to_home UT-SVR-031)
 add_named_case(Test_Server away_to_maintenance_invalid UT-SVR-032)
 add_named_case(Test_Server turn_on_invalid_device_through_handler UT-SVR-033)
 add_named_case(Test_Server turn_off_invalid_device_through_handler UT-SVR-034)
+add_named_case(Test_Server get_status_home UT-SVR-035)
+add_named_case(Test_Server get_status_away UT-SVR-036)
+add_named_case(Test_Server get_status_maintenance UT-SVR-037)
+add_named_case(Test_Server set_mode_maintenance_with_auth_works UT-SVR-038)
+add_named_case(Test_Server set_mode_locked_with_auth_works UT-SVR-039)
+add_named_case(Test_Server set_mode_invalid_transition_rejected UT-SVR-040)
+add_named_case(Test_Server valid_login_sets_username UT-SVR-041)
+add_named_case(Test_Server handle_network_packet_mapping_and_unknown_command UT-SVR-042)
+add_named_case(Test_Server network_packet_serialize_deserialize_smoke UT-SVR-043)
+add_named_case(Test_Server network_packet_deserialize_rejects_invalid_checksum_and_restores UT-SVR-044)
+add_named_case(Test_Server network_manager_send_all_fails_on_invalid_socket UT-SVR-045)
+add_named_case(Test_Server network_manager_recv_all_fails_on_invalid_socket UT-SVR-046)
+add_named_case(Test_Server network_manager_send_receive_packet_loopback UT-SVR-047)
+add_named_case(Test_Server network_manager_send_packet_fails_on_invalid_socket UT-SVR-048)
+add_named_case(Test_Server network_manager_receive_packet_fails_on_invalid_socket UT-SVR-049)
+add_named_case(Test_Server device_manager_turn_on_invalid_fails UT-SVR-050)
+add_named_case(Test_Server device_manager_turn_off_invalid_fails UT-SVR-051)
+add_named_case(Test_Server device_command_turn_off_rejected_in_locked UT-SVR-052)
+add_named_case(Test_Server device_command_get_device_status_rejected_in_locked UT-SVR-053)
+add_named_case(Test_Server device_command_get_all_status_rejected_in_locked UT-SVR-054)
+add_named_case(Test_Server device_command_turn_off_rejected_in_maintenance UT-SVR-055)
+add_named_case(Test_Server device_command_get_device_status_rejected_in_maintenance UT-SVR-056)
+add_named_case(Test_Server device_command_get_all_status_rejected_in_maintenance UT-SVR-057)

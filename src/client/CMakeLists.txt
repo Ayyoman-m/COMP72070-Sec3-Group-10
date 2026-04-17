@@ -56,3 +56,30 @@ target_link_libraries(ClientApp PRIVATE
 set_target_properties(ClientApp PROPERTIES 
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
+# --- 8. Deployment for Demo (Copy DLLs and Plugins) ---
+if(WIN32)
+    # Define paths for clarity
+    set(QT_BIN_DIR "C:/Qt/6.11.0/msvc2022_64/bin")
+    set(QT_PLUGINS_DIR "C:/Qt/6.11.0/msvc2022_64/plugins")
+    set(DEPLOY_DEST "${CMAKE_BINARY_DIR}/bin")
+
+    # Copy the necessary Debug DLLs
+    file(COPY 
+        "${QT_BIN_DIR}/Qt6Cored.dll"
+        "${QT_BIN_DIR}/Qt6Guid.dll"
+        "${QT_BIN_DIR}/Qt6Widgetsd.dll"
+        "${QT_BIN_DIR}/Qt6Networkd.dll"
+        DESTINATION ${DEPLOY_DEST}
+    )
+
+    # Create platforms directory and copy the Windows plugin (CRITICAL for GUI)
+    file(MAKE_DIRECTORY "${DEPLOY_DEST}/platforms")
+    file(COPY 
+        "${QT_PLUGINS_DIR}/platforms/qwindowsd.dll"
+        DESTINATION "${DEPLOY_DEST}/platforms"
+    )
+    
+    # Optional: Create a logs folder for the client if your NetworkManager uses one
+    file(MAKE_DIRECTORY "${DEPLOY_DEST}/logs")
+endif()
